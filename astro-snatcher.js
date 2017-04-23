@@ -7,7 +7,8 @@ var canvas = document.getElementById("canvas"),
 
 var keyVelMax = 0.15,
 	keyVelRate = 0.003,
-	drag = 0.00003;
+	drag = 0.00003, // also functions as gravity
+	bounceSpeed = 0.9;
 
 var level,
 	background;
@@ -212,7 +213,7 @@ function overlapDir(a, b) {
 function bounceVector(vec, mirrorVec) {
 	// mirrorVec should be a unit vector i guess??
 	// formula taken from http://www.3dkingdoms.com/weekly/weekly.php?a=2
-	return addVectors(scaleVector(mirrorVec, -2 * dotProduct(vec, mirrorVec)), vec);
+	return scaleVector(addVectors(scaleVector(mirrorVec, -2 * dotProduct(vec, mirrorVec)), vec), bounceSpeed);
 }
 
 function dotProduct(a, b) {
@@ -280,9 +281,7 @@ function run(time) {
 	ship.velX -= drag * d * xDir;
 	if (Math.sign(ship.velX) === -xDir) ship.velX = 0;
 	
-	yDir = Math.sign(ship.velY);
-	ship.velY -= drag * d * yDir;
-	if (Math.sign(ship.velY) === -yDir) ship.velY = 0;
+	ship.velY += drag * d;
 	
 	
 	var collision = getCollisions();
