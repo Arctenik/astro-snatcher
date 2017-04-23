@@ -112,11 +112,12 @@ function addObjectBox(obj) {
 function getCollisions() {
 	// i think i should at some point have this detect every specific object
 	// that there's a collision with??
+	var collisions = [];
 	for (var i = 0; i < level.objects.length; i++) {
 		let collision = getSpecificCollision(ship, level.objects[i]);
-		if (collision) return collision;
+		if (collision) collisions.push(collision);
 	}
-	return false;
+	return collisions;
 }
 
 function getSpecificCollision(a, b) { // "a" should be the ship i guess??
@@ -152,14 +153,7 @@ function getObjSatCollision(linesObj, a, b) {
 }
 
 function getLineSatCollision(p1, p2, a, b) {
-	var initAxis = [p1[1] - p2[1], p2[0] - p1[0]],
-			// vector for the axis being projected onto;
-			// get distances, switch them, invert new y
-		initAxisMagnitude = Math.sqrt(initAxis[0] ** 2 + initAxis[1] ** 2),
-		axis = [initAxis[0]/initAxisMagnitude, initAxis[1]/initAxisMagnitude];
-			// normalized
-	
-	return getAxisSatCollision(axis, a, b);
+	return getAxisSatCollision(normalizeVector([p1[1] - p2[1], p2[0] - p1[0]]), a, b);
 }
 
 function getAxisSatCollision(axis, a, b) {
@@ -230,6 +224,10 @@ function addVectors(a, b) {
 	return a.map((n, i) => n + b[i]);
 }
 
+function normalizeVector(vec) {
+	return scaleVector(vec, 1/Math.sqrt((vec[0] ** 2) + (vec[1] ** 2)));
+}
+
 
 
 /*
@@ -284,13 +282,16 @@ function run(time) {
 	ship.velY += drag * d;
 	
 	
-	var collision = getCollisions();
-	if (collision) {
+	var collisions = getCollisions();
+	if (collisions.length) {
 		//ctx.fillStyle = "red";
-		let modVector = scaleVector(collision.axis, collision.dir * collision.amount);
+		let modVector = [0, 0];
+		collisions.forEach(collision => {
+			modVector = addVectors(modVector, scaleVector(collision.axis, collision.dir * collision.amount));
+		});
 		ship.x += modVector[0];
 		ship.y += modVector[1];
-		[ship.velX, ship.velY] = bounceVector([ship.velX, ship.velY], collision.axis);
+		[ship.velX, ship.velY] = bounceVector([ship.velX, ship.velY], normalizeVector(modVector));
 		//showCollisionVector(modVector);
 	} //else ctx.fillStyle = "black";
 	
