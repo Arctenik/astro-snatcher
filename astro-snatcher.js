@@ -13,10 +13,23 @@ var keyVelMax = 0.15,
 var level,
 	background;
 
-var upKey = false,
-	rightKey = false,
-	leftKey = false,
-	downKey = false,
+var controlKeys = {
+	arrowup: "moveUp",
+	w: "moveUp",
+	arrowright: "moveRight",
+	d: "moveRight",
+	arrowdown: "moveDown",
+	s: "moveDown",
+	arrowleft: "moveLeft",
+	a: "moveLeft"
+};
+
+var controls = {
+		moveUp: false,
+		moveRight: false,
+		moveDown: false,
+		moveLeft: false
+	},
 	camera = {
 		x: 0,
 		y: 0,
@@ -39,21 +52,13 @@ var upKey = false,
 
 
 document.addEventListener("keydown", e => {
-	switch (e.key) {
-		case "ArrowUp": upKey = true; break;
-		case "ArrowRight": rightKey = true; break;
-		case "ArrowDown": downKey = true; break;
-		case "ArrowLeft": leftKey = true; break;
-	}
+	var key = e.key.toLowerCase();
+	if (controlKeys[key]) controls[controlKeys[key]] = true;
 });
 
 document.addEventListener("keyup", e => {
-	switch (e.key) {
-		case "ArrowUp": upKey = false; break;
-		case "ArrowRight": rightKey = false; break;
-		case "ArrowDown": downKey = false; break;
-		case "ArrowLeft": leftKey = false; break;
-	}
+	var key = e.key.toLowerCase();
+	if (controlKeys[key]) controls[controlKeys[key]] = false;
 });
 
 
@@ -253,20 +258,20 @@ function run(time) {
 	var xDir, yDir;
 	
 	
-	if (leftKey && ship.velX > -keyVelMax) {
+	if (controls.moveLeft && ship.velX > -keyVelMax) {
 		ship.velX -= keyVelRate;
 	}
 	
-	if (rightKey && ship.velX < keyVelMax) {
+	if (controls.moveRight && ship.velX < keyVelMax) {
 		ship.velX += keyVelRate;
 	}
 	
 	
-	if (upKey && ship.velY > -keyVelMax) {
+	if (controls.moveUp && ship.velY > -keyVelMax) {
 		ship.velY -= keyVelRate;
 	}
 	
-	if (downKey && ship.velY < keyVelMax) {
+	if (controls.moveDown && ship.velY < keyVelMax) {
 		ship.velY += keyVelRate;
 	}
 	
