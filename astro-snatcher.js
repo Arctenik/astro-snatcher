@@ -173,8 +173,8 @@ function projectObj(obj, axis) {
 	var min, max;
 	obj.vertices.forEach(([x, y]) => {
 		var proj = projectPoint([x + obj.x, y + obj.y], axis);
-		min = min ? Math.min(min, proj) : proj;
-		max = max ? Math.max(max, proj) : proj;
+		min = min === undefined ? proj : Math.min(min, proj);
+		max = max === undefined ? proj : Math.max(max, proj);
 	});
 	return [min, max];
 }
