@@ -12,7 +12,11 @@ var keyVelMax = 0.15,
 	clawRate = 0.1,
 	clawMax = 64;
 
-var level;
+var baseImageNames = ["ship.png", "claw.png", "claw-arm.png"],
+	images = {};
+
+var levelPath = "test-level",
+	level;
 
 var controlKeys = {
 	arrowup: "moveUp",
@@ -43,6 +47,9 @@ var controls = {
 	ship = addObjectBox({
 		x: 100,
 		y: 100,
+		sprite: "ship.png",
+		spriteX: -10,
+		spriteY: -12,
 		vertices: [
 			[10, 0],
 			[90, 0],
@@ -61,6 +68,12 @@ var controls = {
 				this.holding.y = this.y + this.holdingY;
 			}
 		},
+		sprite: "claw.png",
+		spriteX: -2,
+		spriteY: -2,
+		armSprite: "claw-arm.png",
+		armSpriteX: 3, // (relative to claw position)
+		armSpriteEnds: 5, // (amount that it continues beyond the "actual" arm on either side)
 		vertices: [
 			[0, 0],
 			[16, 0],
@@ -88,11 +101,11 @@ document.addEventListener("keyup", e => {
 function getLevel() {
 	return new Promise(resolve => {
 		var r = new XMLHttpRequest();
-		r.open("get", "test-level.json");
+		r.open("get", levelPath + "/level.json");
 		r.responseType = "json";
 		r.onload = () => {
 			level = addLevelBoxes(r.response);
-			resolve();
+			getLevelImages().then(resolve);
 		}
 		r.send();
 	});
@@ -114,6 +127,35 @@ function addObjectBox(obj) {
 	obj.width = maxX - minX;
 	obj.height = maxY - minY;
 	return obj;
+}
+
+
+
+function getLevelImages() {
+	return new Promise(resolve => {
+		var imageNames = [];
+		if (level.background) imageNames.push(level.background);
+		if (level.foreground) imageNames.push(level.foreground);
+		level.objects.forEach(obj => {
+			if (obj.sprite) imageNames.push(obj.sprite);
+		});
+		Promise.all(imageNames.map(name => getImage(name, levelPath + "/"))).then(resolve);
+	});
+}
+
+function getBaseImages() {
+	return Promise.all(baseImageNames.map(name => getImage(name)));
+}
+
+function getImage(name, pathPrefix = "") {
+	return new Promise(resolve => {
+		var img = new Image();
+		img.onload = () => {
+			images[name] = img;
+			resolve();
+		}
+		img.src = pathPrefix + name;
+	});
 }
 
 
@@ -262,8 +304,20 @@ function drawLevel() {
 }
 
 function drawLevelObject(obj) {
-	drawPolygon(obj.x - camera.x, obj.y - camera.y, obj.vertices, obj.solid ? "gray" : (obj.collectible ? "lightgreen" : "lightgray"));
+	if (obj.sprite) drawLevelImage(images[obj.sprite], obj.x + obj.spriteX, obj.y + obj.spriteY);
 }
+
+function drawLevelImage(...args) {
+	if (args[5] !== undefined) {
+		args[5] -= camera.x;
+		args[6] -= camera.y;
+	} else {
+		args[1] -= camera.x;
+		args[2] -= camera.y;
+	}
+	ctx.drawImage(...args);
+}
+
 
 function drawPolygon(x, y, vertices, color) {
 	ctx.beginPath();
@@ -287,7 +341,7 @@ function showCollisionVector(vec) {
 
 var prevTime;
 
-getLevel().then(() => requestAnimationFrame(run));
+getBaseImages().then(() => getLevel().then(() => requestAnimationFrame(run)));
 
 function run(time) {
 	
@@ -385,12 +439,30 @@ function run(time) {
 	
 	ctx.clearRect(0, 0, camera.width, camera.height);
 	
-	drawPolygon(ship.x - camera.x, ship.y - camera.y, ship.vertices, "black");
-	drawPolygon(claw.x - camera.x, claw.y - camera.y, claw.vertices, "red");
+	if (level.background)
+		ctx.drawImage(images[level.background], -camera.x, -camera.y);
+	
+	var armImage = images[claw.armSprite],
+		armDimensions = [armImage.width, (claw.armSpriteEnds * 2) + claw.extended];
+	
+	drawLevelImage(
+		armImage,
+		0, armImage.height - (claw.armSpriteEnds * 2) - claw.extended,
+		...armDimensions,
+		claw.x + claw.armSpriteX, ship.y + ship.height - claw.height - claw.armSpriteEnds,
+		...armDimensions
+	);
+	
+	drawLevelImage(images[claw.sprite], claw.x + claw.spriteX, claw.y + claw.spriteY);
+	
+	drawLevelImage(images[ship.sprite], ship.x + ship.spriteX, ship.y + ship.spriteY);
 	
 	if (claw.holding) drawLevelObject(claw.holding);
 	
 	drawLevel();
+	
+	if (level.foreground)
+		ctx.drawImage(images[level.foreground], -camera.x, -camera.y);
 	
 	
 	Object.assign(prevControls, controls);

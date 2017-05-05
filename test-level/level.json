@@ -1,16 +1,21 @@
 {
 	"width": 800,
 	"height": 800,
+	"background": "background.png",
+	"foreground": "foreground.png",
 	"objects": [
 		{
 			"collectible": true,
 			"x": 300,
-			"y": 720,
+			"y": 730,
+			"sprite": "treasure.png",
+			"spriteX": -5,
+			"spriteY": -5,
 			"vertices": [
 				[0, 0],
-				[30, 0],
-				[30, 30],
-				[0, 30]
+				[20, 0],
+				[20, 20],
+				[0, 20]
 			]
 		},
 		{
