@@ -8,10 +8,11 @@ var canvas = document.getElementById("canvas"),
 var keyVelMax = 0.15,
 	keyVelRate = 0.003,
 	drag = 0.00003, // also functions as gravity
-	bounceSpeed = 0.9;
+	bounceSpeed = 0.9,
+	clawRate = 0.1,
+	clawMax = 64;
 
-var level,
-	background;
+var level;
 
 var controlKeys = {
 	arrowup: "moveUp",
@@ -21,15 +22,18 @@ var controlKeys = {
 	arrowdown: "moveDown",
 	s: "moveDown",
 	arrowleft: "moveLeft",
-	a: "moveLeft"
+	a: "moveLeft",
+	" ": "claw"
 };
 
 var controls = {
 		moveUp: false,
 		moveRight: false,
 		moveDown: false,
-		moveLeft: false
+		moveLeft: false,
+		claw: false
 	},
+	prevControls = Object.assign({}, controls),
 	camera = {
 		x: 0,
 		y: 0,
@@ -47,6 +51,24 @@ var controls = {
 		],
 		velX: 0,
 		velY: 0
+	}),
+	claw = addObjectBox({
+		updateCoords() {
+			this.x = ship.x + (ship.width/2) - (this.width/2);
+			this.y = ship.y + ship.height - this.height + this.extended;
+			if (this.holding) {
+				this.holding.x = this.x + this.holdingX;
+				this.holding.y = this.y + this.holdingY;
+			}
+		},
+		vertices: [
+			[0, 0],
+			[16, 0],
+			[16, 16],
+			[0, 16]
+		],
+		extended: 0,
+		holding: false
 	});
 
 
@@ -70,24 +92,6 @@ function getLevel() {
 		r.responseType = "json";
 		r.onload = () => {
 			level = addLevelBoxes(r.response);
-			background = document.createElement("canvas");
-			var bgCtx = background.getContext("2d");
-			background.width = level.width;
-			background.height = level.height;
-			bgCtx.fillStyle = "gray";
-			level.objects.forEach(obj => {
-				bgCtx.beginPath();
-				obj.vertices.forEach(([x, y], i) => {
-					bgCtx[i ? "lineTo" : "moveTo"](x + obj.x, y + obj.y);
-				});
-				bgCtx.fill();
-			});
-			/*
-			bgCtx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-			level.objects.forEach(obj => {
-				bgCtx.strokeRect(obj.x, obj.y, obj.width, obj.height);
-			});
-			*/
 			resolve();
 		}
 		r.send();
@@ -114,18 +118,35 @@ function addObjectBox(obj) {
 
 
 
-function getCollisions() {
-	// i think i should at some point have this detect every specific object
-	// that there's a collision with??
+function getShipCollisions() {
 	var collisions = [];
 	for (var i = 0; i < level.objects.length; i++) {
-		let collision = getSpecificCollision(ship, level.objects[i]);
-		if (collision) collisions.push(collision);
+		let levelObj = level.objects[i];
+		if (levelObj.solid) {
+			let collision = getSpecificCollision(ship, levelObj);
+			if (collision) collisions.push(collision);
+		}
 	}
 	return collisions;
 }
 
-function getSpecificCollision(a, b) { // "a" should be the ship i guess??
+function getClawCollisions() {
+	var collisions = [],
+		collectible;
+	for (var i = 0; i < level.objects.length; i++) {
+		let levelObj = level.objects[i];
+		if (levelObj.solid || (!collectible && levelObj.collectible)) {
+			let collision = getSpecificCollision(claw, levelObj);
+			if (collision) {
+				if (levelObj.collectible) collectible = levelObj;
+				else collisions.push(collision);
+			}
+		}
+	}
+	return [collisions, collectible];
+}
+
+function getSpecificCollision(a, b) { // 'a' should be the "main" object i guess??
 	return getRectCollision(a, b) && getSatCollision(a, b);
 }
 
@@ -235,6 +256,24 @@ function normalizeVector(vec) {
 
 
 
+
+function drawLevel() {
+	level.objects.forEach(obj => drawLevelObject(obj));
+}
+
+function drawLevelObject(obj) {
+	drawPolygon(obj.x - camera.x, obj.y - camera.y, obj.vertices, obj.solid ? "gray" : (obj.collectible ? "lightgreen" : "lightgray"));
+}
+
+function drawPolygon(x, y, vertices, color) {
+	ctx.beginPath();
+	vertices.forEach(([vx, vy], i) => ctx[i ? "lineTo" : "moveTo"](x + vx, y + vy));
+	ctx.fillStyle = color;
+	ctx.fill();
+}
+
+
+
 /*
 function showCollisionVector(vec) {	
 	var angle = 180 * (Math.asin(vec[1])/Math.PI);
@@ -254,8 +293,6 @@ function run(time) {
 	
 	var d = time - (prevTime === undefined ? time: prevTime);
 	
-	
-	var xDir, yDir;
 	
 	
 	if (controls.moveLeft && ship.velX > -keyVelMax) {
@@ -280,14 +317,39 @@ function run(time) {
 	ship.y += ship.velY * d;
 	
 	
-	xDir = Math.sign(ship.velX);
+	var xDir = Math.sign(ship.velX);
 	ship.velX -= drag * d * xDir;
 	if (Math.sign(ship.velX) === -xDir) ship.velX = 0;
 	
 	ship.velY += drag * d;
 	
 	
-	var collisions = getCollisions();
+	if (controls.claw) {
+		claw.extended += clawRate * d;
+		if (claw.extended > clawMax) claw.extended = clawMax;
+	} else {
+		claw.extended -= clawRate * d;
+		if (claw.extended < 0) claw.extended = 0;
+	}
+	
+	
+	claw.updateCoords();
+	
+	
+	var shipCollisions = getShipCollisions(),
+		clawCollisions, clawCollectible;
+	
+	if (claw.extended) [clawCollisions, clawCollectible] = getClawCollisions();
+	
+	if (clawCollectible && prevControls.claw && !controls.claw) {
+		claw.holding = clawCollectible;
+		claw.holdingX = clawCollectible.x - claw.x;
+		claw.holdingY = clawCollectible.y - claw.y;
+		level.objects.splice(level.objects.indexOf(clawCollectible), 1);
+	}
+	
+	var collisions = clawCollisions ? [...shipCollisions, ...clawCollisions] : shipCollisions;
+	
 	if (collisions.length) {
 		//ctx.fillStyle = "red";
 		let modVector = [0, 0];
@@ -296,9 +358,20 @@ function run(time) {
 		});
 		ship.x += modVector[0];
 		ship.y += modVector[1];
-		[ship.velX, ship.velY] = bounceVector([ship.velX, ship.velY], normalizeVector(modVector));
+		let dir = [ship.velX, ship.velY];
+		if (clawCollisions && clawCollisions.length) {
+			let clawDir = [ship.velX, (!controls.claw || claw.extended === clawMax ? 0 : clawRate) + ship.velY],
+				vel = Math.max((ship.velX ** 2) + (ship.velY ** 2), Math.sqrt((clawDir[0] ** 2) + (clawDir[1] ** 2)));
+					//nnnnnnot quite sure if this is the best way to do that
+			
+			dir = scaleVector(normalizeVector(addVectors(dir, clawDir)), vel);
+		}
+		[ship.velX, ship.velY] = bounceVector(dir, normalizeVector(modVector));
 		//showCollisionVector(modVector);
 	} //else ctx.fillStyle = "black";
+	
+	
+	claw.updateCoords();
 	
 	
 	camera.x = Math.round(ship.x - (camera.width/2) + (ship.width/2));
@@ -312,17 +385,15 @@ function run(time) {
 	
 	ctx.clearRect(0, 0, camera.width, camera.height);
 	
-	ctx.drawImage(background, camera.x, camera.y, camera.width, camera.height, 0, 0, camera.width, camera.height);
+	drawPolygon(ship.x - camera.x, ship.y - camera.y, ship.vertices, "black");
+	drawPolygon(claw.x - camera.x, claw.y - camera.y, claw.vertices, "red");
 	
-	var shipRenderX = ship.x - camera.x,
-		shipRenderY = ship.y - camera.y;
+	if (claw.holding) drawLevelObject(claw.holding);
 	
-	ctx.beginPath();
-	ship.vertices.forEach(([x, y], i) => {
-		ctx[i ? "lineTo" : "moveTo"](shipRenderX + x, shipRenderY + y);
-	});
-	ctx.fill();
+	drawLevel();
 	
+	
+	Object.assign(prevControls, controls);
 	
 	prevTime = time;
 	
