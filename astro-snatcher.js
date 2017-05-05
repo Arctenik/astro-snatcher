@@ -2,6 +2,8 @@
 
 //var collisionVectorElem = document.getElementById("collisionVectorElem");
 
+var hitboxInp = document.getElementById("hitboxInp");
+
 var canvas = document.getElementById("canvas"),
 	ctx = canvas.getContext("2d");
 
@@ -51,8 +53,8 @@ var controls = {
 		spriteX: -10,
 		spriteY: -12,
 		vertices: [
-			[10, 0],
-			[90, 0],
+			[20, 0],
+			[80, 0],
 			[100, 70],
 			[0, 70]
 		],
@@ -319,6 +321,29 @@ function drawLevelImage(...args) {
 }
 
 
+function drawHitboxes() {
+	drawHitbox(ship);
+	drawHitbox(claw);
+	level.objects.forEach(obj => drawHitbox(obj));
+}
+
+function drawHitbox(obj) {
+	ctx.beginPath();
+	obj.vertices.forEach(([x, y], i) =>
+		ctx[i ? "lineTo" : "moveTo"](x + obj.x - camera.x, y + obj.y - camera.y));
+	ctx.closePath();
+	ctx.setLineDash([5, 5]);
+	ctx.lineDashOffset = 0;
+	ctx.strokeStyle = "black";
+	ctx.stroke();
+	ctx.lineDashOffset = 5;
+	ctx.strokeStyle = "white";
+	ctx.stroke();
+	ctx.lineDashOffset = 0;
+	ctx.setLineDash([]);
+}
+
+
 function drawPolygon(x, y, vertices, color) {
 	ctx.beginPath();
 	vertices.forEach(([vx, vy], i) => ctx[i ? "lineTo" : "moveTo"](x + vx, y + vy));
@@ -440,7 +465,7 @@ function run(time) {
 	ctx.clearRect(0, 0, camera.width, camera.height);
 	
 	if (level.background)
-		ctx.drawImage(images[level.background], -camera.x, -camera.y);
+		ctx.drawImage(images[level.background], 0, 0);
 	
 	var armImage = images[claw.armSprite],
 		armDimensions = [armImage.width, (claw.armSpriteEnds * 2) + claw.extended];
@@ -463,6 +488,9 @@ function run(time) {
 	
 	if (level.foreground)
 		ctx.drawImage(images[level.foreground], -camera.x, -camera.y);
+	
+	
+	if (hitboxInp.checked) drawHitboxes();
 	
 	
 	Object.assign(prevControls, controls);
