@@ -3,6 +3,17 @@
 	"height": 800,
 	"objects": [
 		{
+			"collectible": true,
+			"x": 300,
+			"y": 720,
+			"vertices": [
+				[0, 0],
+				[30, 0],
+				[30, 30],
+				[0, 30]
+			]
+		},
+		{
 			"solid": true,
 			"x": 0,
 			"y": 0,
