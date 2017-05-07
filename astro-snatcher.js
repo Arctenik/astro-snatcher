@@ -13,7 +13,10 @@ var keyVelMax = 0.15,
 	bounceSpeed = 0.9,
 	clawRate = 0.1,
 	clawCarryingRate = 0.025,
-	clawMax = 64;
+	clawMax = 64,
+	winTimeMax = 2000;
+
+var winMessage = "STAGE CLEAR";
 
 var baseImageNames = ["ship.png", "claw.png", "claw-arm.png"],
 	images = {};
@@ -34,6 +37,7 @@ var controlKeys = {
 };
 
 var score = 0,
+	winTime,
 	controls = {
 		moveUp: false,
 		moveRight: false,
@@ -168,15 +172,21 @@ function getImage(name, pathPrefix = "") {
 
 
 function getObjectCollisions(obj) {
-	var collisions = [];
+	var collisions = [],
+		net;
+	
 	for (var i = 0; i < level.objects.length; i++) {
 		let levelObj = level.objects[i];
-		if (levelObj.solid && obj !== levelObj) {
+		if (obj !== levelObj && (levelObj.solid || (levelObj.net && !net))) {
 			let collision = getSpecificCollision(obj, levelObj);
-			if (collision) collisions.push(collision);
+			if (collision) {
+				if (levelObj.net) net = levelObj;
+				else collisions.push(collision);
+			}
 		}
 	}
-	return collisions;
+	
+	return [collisions, net];
 }
 
 function getShipCollisions() {
@@ -194,6 +204,7 @@ function getShipCollisions() {
 function getClawCollisions() {
 	var collisions = [],
 		collectible;
+	
 	for (var i = 0; i < level.objects.length; i++) {
 		let levelObj = level.objects[i];
 		if (levelObj.solid || (!collectible && levelObj.collectible)) {
@@ -204,6 +215,7 @@ function getClawCollisions() {
 			}
 		}
 	}
+	
 	return [collisions, collectible];
 }
 
@@ -381,6 +393,9 @@ function drawPolygon(x, y, vertices, color) {
 var effectFuncs = {
 	addScore(amount) {
 		score += amount;
+	},
+	winLevel() {
+		winTime = 0;
 	}
 }
 
@@ -413,19 +428,27 @@ function run(time) {
 	var d = time - (prevTime === undefined ? time: prevTime);
 	
 	
+	var deleteObjects = [];
 	
 	level.objects.forEach(obj => {
 		if (obj.hasGravity) {
 			obj.velY += drag * d;
 			obj.y += obj.velY * d;
-			var objCollisions = getObjectCollisions(obj);
-			if (objCollisions.length) {
+			var [objCollisions, net] = getObjectCollisions(obj);
+			if (net && obj.carriable) {
+				deleteObjects.push(obj);
+				evalEffects(obj.rewards);
+			} else if (objCollisions.length) {
 				var modVector = getDisplacementVector(objCollisions);
 				obj.x += modVector[0];
 				obj.y += modVector[1];
 				obj.velY = 0;
 			}
 		}
+	});
+	
+	deleteObjects.forEach(obj => {
+		level.objects.splice(level.objects.indexOf(obj), 1);
 	});
 	
 	
@@ -467,6 +490,7 @@ function run(time) {
 	} else if (claw.holding && !controls.claw && prevControls.claw) {
 		claw.updateCoords();
 		level.objects.push(claw.holding);
+		claw.holding.velY = 0;
 		claw.holding = false;
 		droppedHeldItem = true;
 	} else if (claw.holding && claw.holding.carriable) {
@@ -572,10 +596,21 @@ function run(time) {
 	scoreElem.textContent = score;
 	
 	
+	if (winTime !== undefined) {
+		ctx.fillStyle = `rgba(0, 0, 0, ${(winTime > winTimeMax ? winTimeMax : winTime)/winTimeMax})`;
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		ctx.font = "50px sans-serif";
+		ctx.fillStyle = "yellow";
+		let {width} = ctx.measureText(winMessage);
+		ctx.fillText(winMessage, (canvas.width - width)/2, (canvas.height + 50)/2);
+		winTime += d;
+	}
+	
+	
 	Object.assign(prevControls, controls);
 	
 	prevTime = time;
 	
-	requestAnimationFrame(run);
+	if (winTime === undefined || winTime < winTimeMax) requestAnimationFrame(run);
 	
 }

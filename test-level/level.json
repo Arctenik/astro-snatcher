@@ -5,6 +5,20 @@
 	"foreground": "foreground.png",
 	"objects": [
 		{
+			"net": true,
+			"x": 80,
+			"y": 294,
+			"sprite": "net.png",
+			"spriteX": -52,
+			"spriteY": -74,
+			"vertices": [
+				[0, 0],
+				[165, 0],
+				[165, 40],
+				[0, 40]
+			]
+		},
+		{
 			"collectible": true,
 			"rewards": [["addScore", 25]],
 			"x": 300,
@@ -23,6 +37,10 @@
 			"collectible": true,
 			"carriable": true,
 			"hasGravity": true,
+			"rewards": [
+				["addScore", 300],
+				["winLevel"]
+			],
 			"x": 465,
 			"y": 355,
 			"sprite": "treasure.png",
