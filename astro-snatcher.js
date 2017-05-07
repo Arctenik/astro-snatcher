@@ -12,6 +12,7 @@ var keyVelMax = 0.15,
 	drag = 0.00003, // also functions as gravity
 	bounceSpeed = 0.9,
 	clawRate = 0.1,
+	clawCarryingRate = 0.025,
 	clawMax = 64;
 
 var baseImageNames = ["ship.png", "claw.png", "claw-arm.png"],
@@ -32,7 +33,8 @@ var controlKeys = {
 	" ": "claw"
 };
 
-var controls = {
+var score = 0,
+	controls = {
 		moveUp: false,
 		moveRight: false,
 		moveDown: false,
@@ -106,15 +108,18 @@ function getLevel() {
 		r.open("get", levelPath + "/level.json");
 		r.responseType = "json";
 		r.onload = () => {
-			level = addLevelBoxes(r.response);
+			level = fillLevelProperties(r.response);
 			getLevelImages().then(resolve);
 		}
 		r.send();
 	});
 }
 
-function addLevelBoxes(level) {
-	level.objects.forEach(obj => addObjectBox(obj));
+function fillLevelProperties(level) {
+	level.objects.forEach(obj => {
+		addObjectBox(obj);
+		if (obj.hasGravity) obj.velY = 0;
+	});
 	return level;
 }
 
@@ -161,6 +166,18 @@ function getImage(name, pathPrefix = "") {
 }
 
 
+
+function getObjectCollisions(obj) {
+	var collisions = [];
+	for (var i = 0; i < level.objects.length; i++) {
+		let levelObj = level.objects[i];
+		if (levelObj.solid && obj !== levelObj) {
+			let collision = getSpecificCollision(obj, levelObj);
+			if (collision) collisions.push(collision);
+		}
+	}
+	return collisions;
+}
 
 function getShipCollisions() {
 	var collisions = [];
@@ -274,6 +291,14 @@ function overlapDir(a, b) {
 
 
 
+function getDisplacementVector(collisions) {
+	var modVector = [0, 0];
+	collisions.forEach(collision => {
+		modVector = addVectors(modVector, scaleVector(collision.axis, collision.dir * collision.amount));
+	});
+	return modVector;
+}
+
 function bounceVector(vec, mirrorVec) {
 	// mirrorVec should be a unit vector i guess??
 	// formula taken from http://www.3dkingdoms.com/weekly/weekly.php?a=2
@@ -353,6 +378,21 @@ function drawPolygon(x, y, vertices, color) {
 
 
 
+var effectFuncs = {
+	addScore(amount) {
+		score += amount;
+	}
+}
+
+function evalEffects(effects) {
+	if (effects) effects.forEach(effect => {
+		if (effectFuncs[effect[0]])
+			effectFuncs[effect[0]](...effect.slice(1));
+	});
+}
+
+
+
 /*
 function showCollisionVector(vec) {	
 	var angle = 180 * (Math.asin(vec[1])/Math.PI);
@@ -371,6 +411,22 @@ getBaseImages().then(() => getLevel().then(() => requestAnimationFrame(run)));
 function run(time) {
 	
 	var d = time - (prevTime === undefined ? time: prevTime);
+	
+	
+	
+	level.objects.forEach(obj => {
+		if (obj.hasGravity) {
+			obj.velY += drag * d;
+			obj.y += obj.velY * d;
+			var objCollisions = getObjectCollisions(obj);
+			if (objCollisions.length) {
+				var modVector = getDisplacementVector(objCollisions);
+				obj.x += modVector[0];
+				obj.y += modVector[1];
+				obj.velY = 0;
+			}
+		}
+	});
 	
 	
 	
@@ -403,12 +459,29 @@ function run(time) {
 	ship.velY += drag * d;
 	
 	
-	if (controls.claw) {
+	var droppedHeldItem;
+	
+	if (controls.claw && !claw.holding) {
 		claw.extended += clawRate * d;
+		if (claw.extended > clawMax) claw.extended = clawMax;
+	} else if (claw.holding && !controls.claw && prevControls.claw) {
+		claw.updateCoords();
+		level.objects.push(claw.holding);
+		claw.holding = false;
+		droppedHeldItem = true;
+	} else if (claw.holding && claw.holding.carriable) {
+		claw.extended += clawCarryingRate * d;
 		if (claw.extended > clawMax) claw.extended = clawMax;
 	} else {
 		claw.extended -= clawRate * d;
-		if (claw.extended < 0) claw.extended = 0;
+		if (claw.extended <= 0) {
+			claw.extended = 0;
+			if (claw.holding && !claw.holding.carriable) {
+				let obj = claw.holding;
+				claw.holding = false;
+				evalEffects(obj.rewards);
+			}
+		}
 	}
 	
 	
@@ -420,7 +493,7 @@ function run(time) {
 	
 	if (claw.extended) [clawCollisions, clawCollectible] = getClawCollisions();
 	
-	if (clawCollectible && prevControls.claw && !controls.claw) {
+	if (clawCollectible && !claw.holding && !droppedHeldItem && prevControls.claw && !controls.claw) {
 		claw.holding = clawCollectible;
 		claw.holdingX = clawCollectible.x - claw.x;
 		claw.holdingY = clawCollectible.y - claw.y;
@@ -431,10 +504,7 @@ function run(time) {
 	
 	if (collisions.length) {
 		//ctx.fillStyle = "red";
-		let modVector = [0, 0];
-		collisions.forEach(collision => {
-			modVector = addVectors(modVector, scaleVector(collision.axis, collision.dir * collision.amount));
-		});
+		let modVector = getDisplacementVector(collisions);
 		ship.x += modVector[0];
 		ship.y += modVector[1];
 		let dir = [ship.velX, ship.velY];
@@ -451,6 +521,12 @@ function run(time) {
 	
 	
 	claw.updateCoords();
+	
+	
+	if (shipCollisions.length && claw.holding && claw.holding.carriable) {
+		level.objects.push(claw.holding);
+		claw.holding = false;
+	}
 	
 	
 	camera.x = Math.round(ship.x - (camera.width/2) + (ship.width/2));
@@ -491,6 +567,9 @@ function run(time) {
 	
 	
 	if (hitboxInp.checked) drawHitboxes();
+	
+	
+	scoreElem.textContent = score;
 	
 	
 	Object.assign(prevControls, controls);
