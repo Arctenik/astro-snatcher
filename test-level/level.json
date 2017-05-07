@@ -6,8 +6,25 @@
 	"objects": [
 		{
 			"collectible": true,
+			"rewards": [["addScore", 25]],
 			"x": 300,
-			"y": 730,
+			"y": 735,
+			"sprite": "trinket.png",
+			"spriteX": -3,
+			"spriteY": -3,
+			"vertices": [
+				[0, 0],
+				[10, 0],
+				[10, 10],
+				[0, 10]
+			]
+		},
+		{
+			"collectible": true,
+			"carriable": true,
+			"hasGravity": true,
+			"x": 465,
+			"y": 355,
 			"sprite": "treasure.png",
 			"spriteX": -5,
 			"spriteY": -5,
