@@ -601,8 +601,15 @@ function run(time) {
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 		ctx.font = "50px sans-serif";
 		ctx.fillStyle = "yellow";
-		let {width} = ctx.measureText(winMessage);
-		ctx.fillText(winMessage, (canvas.width - width)/2, (canvas.height + 50)/2);
+		let width = ctx.measureText(winMessage).width,
+			messageY = (canvas.height + 50)/2;
+		ctx.fillText(winMessage, (canvas.width - width)/2, messageY);
+		if (winTime > winTimeMax/2) {
+			let scoreMessage = "Score: " + score;
+			ctx.font = "30px sans-serif";
+			let scoreWidth = ctx.measureText(scoreMessage).width;
+			ctx.fillText(scoreMessage, (canvas.width - scoreWidth)/2, messageY + 50);
+		}
 		winTime += d;
 	}
 	
