@@ -8,9 +8,13 @@
 			"net": true,
 			"x": 80,
 			"y": 294,
-			"sprite": "net.png",
-			"spriteX": -52,
-			"spriteY": -74,
+			"sprites": {
+				"main": {
+					"src": "net.png",
+					"x": -52,
+					"y": -74
+				}
+			},
 			"vertices": [
 				[0, 0],
 				[165, 0],
@@ -19,13 +23,40 @@
 			]
 		},
 		{
+			"solid": true,
+			"x": 680,
+			"y": 250,
+			"onStart": [
+				["gameLoop", 
+					["slideTo", 590, 400, 2000],
+					["slideTo", 680, 250, 2000]]
+			],
+			"sprites": {
+				"main": {
+					"src": "alien.png",
+					"x": -17,
+					"y": -7
+				}
+			},
+			"vertices": [
+				[0, 0],
+				[30, 0],
+				[30, 30],
+				[0, 30]
+			]
+		},
+		{
 			"collectible": true,
 			"rewards": [["addScore", 25]],
 			"x": 300,
 			"y": 735,
-			"sprite": "trinket.png",
-			"spriteX": -3,
-			"spriteY": -3,
+			"sprites": {
+				"main": {
+					"src": "trinket.png",
+					"x": -3,
+					"y": -3
+				}
+			},
 			"vertices": [
 				[0, 0],
 				[10, 0],
@@ -43,9 +74,13 @@
 			],
 			"x": 465,
 			"y": 355,
-			"sprite": "treasure.png",
-			"spriteX": -5,
-			"spriteY": -5,
+			"sprites": {
+				"main": {
+					"src": "treasure.png",
+					"x": -5,
+					"y": -5
+				}
+			},
 			"vertices": [
 				[0, 0],
 				[20, 0],

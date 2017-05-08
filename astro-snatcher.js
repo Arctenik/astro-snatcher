@@ -38,6 +38,7 @@ var controlKeys = {
 
 var score = 0,
 	winTime,
+	gameScripts = [],
 	controls = {
 		moveUp: false,
 		moveRight: false,
@@ -122,7 +123,11 @@ function getLevel() {
 function fillLevelProperties(level) {
 	level.objects.forEach(obj => {
 		addObjectBox(obj);
-		if (obj.hasGravity) obj.velY = 0;
+		if (obj.sprites && obj.sprite === undefined) obj.sprite = Object.keys(obj.sprites)[0];
+		if (obj.hasGravity) {
+			obj.velY = 0;
+			//obj.velX = 0;
+		}
 	});
 	return level;
 }
@@ -148,7 +153,7 @@ function getLevelImages() {
 		if (level.background) imageNames.push(level.background);
 		if (level.foreground) imageNames.push(level.foreground);
 		level.objects.forEach(obj => {
-			if (obj.sprite) imageNames.push(obj.sprite);
+			if (obj.sprites) imageNames.push(...Object.values(obj.sprites).map(({src}) => src));
 		});
 		Promise.all(imageNames.map(name => getImage(name, levelPath + "/"))).then(resolve);
 	});
@@ -220,7 +225,12 @@ function getClawCollisions() {
 }
 
 function getSpecificCollision(a, b) { // 'a' should be the "main" object i guess??
-	return getRectCollision(a, b) && getSatCollision(a, b);
+	var result = getRectCollision(a, b) && getSatCollision(a, b);
+	if (result) {
+		if (b.transferVelX) result.transferVelX = b.transferVelX;
+		if (b.transferVelY) result.transferVelY = b.transferVelY;
+	}
+	return result;
 }
 
 function getRectCollision(a, b) {
@@ -279,7 +289,8 @@ function projectObj(obj, axis) {
 }
 
 function projectPoint(point, axis) {
-	return (point[0] * axis[0]) + (point[1] * axis[1]);
+	return dotProduct(point, axis);
+	//return (point[0] * axis[0]) + (point[1] * axis[1]);
 }
 
 function segmentsIntersect1D(a, b) {
@@ -327,8 +338,13 @@ function scaleVector(vec, n) {
 	return vec.map(vn => vn * n);
 }
 
-function addVectors(a, b) {
-	return a.map((n, i) => n + b[i]);
+function addVectors(...vectors) {
+	var result = [0, 0];
+	vectors.forEach(([x, y]) => {
+		result[0] += x;
+		result[1] += y;
+	});
+	return result;
 }
 
 function normalizeVector(vec) {
@@ -343,7 +359,10 @@ function drawLevel() {
 }
 
 function drawLevelObject(obj) {
-	if (obj.sprite) drawLevelImage(images[obj.sprite], obj.x + obj.spriteX, obj.y + obj.spriteY);
+	if (obj.sprite !== undefined) {
+		let sprite = obj.sprites[obj.sprite];
+		drawLevelImage(images[sprite.src], obj.x + sprite.x, obj.y + sprite.y);
+	}
 }
 
 function drawLevelImage(...args) {
@@ -390,20 +409,93 @@ function drawPolygon(x, y, vertices, color) {
 
 
 
-var effectFuncs = {
-	addScore(amount) {
-		score += amount;
+var effectsInfo = {
+	gameScript: {
+		syntax: true,
+		func: function(info, ...effects) {
+			gameScripts.push({
+				info, effects,
+				index: 0
+			});
+		}
 	},
-	winLevel() {
-		winTime = 0;
+	gameLoop: {
+		syntax: true,
+		func: function(info, ...effects) {
+			gameScripts.push({
+				info, effects,
+				loop: true,
+				index: 0
+			});
+		}
+	},
+	wait: {
+		func: function(info, duration) {
+			return {
+				isRunner: true,
+				start: info.time,
+				end: info.time + duration
+			}
+		}
+	},
+	slideTo: {
+		func: function(info, x, y, duration) {
+			var prevX = info.object.x,
+				prevY = info.object.y,
+				lengthX = x - prevX,
+				lengthY = y - prevY;
+			
+			return {
+				isRunner: true,
+				start: info.time,
+				end: info.time + duration,
+				runStart: function() {
+					info.object.transferVelX = lengthX/duration;
+					info.object.transferVelY = lengthY/duration;
+				},
+				runEnd: function() {
+					info.object.transferVelX = undefined;
+					info.object.transferVelY = undefined;
+				},
+				run: function(elapsed) {
+					var fraction = elapsed/duration;
+					info.object.x = prevX + (fraction * lengthX);
+					info.object.y = prevY + (fraction * lengthY);
+				}
+			}
+		}
+	},
+	addScore: {
+		func: function(i, amount) {
+			score += amount;
+		}
+	},
+	winLevel: {
+		func: function() {
+			winTime = 0;
+		}
+	},
+	"console.log": {
+		func: function(i, ...args) {
+			console.log(...args);
+		}
 	}
 }
 
-function evalEffects(effects) {
-	if (effects) effects.forEach(effect => {
-		if (effectFuncs[effect[0]])
-			effectFuncs[effect[0]](...effect.slice(1));
-	});
+function evalEffects(info, effects) {
+	if (Array.isArray(effects)) return effects.map(e => evalEffect(info, e));
+	else return effects;
+}
+
+function evalEffect(info, effect) {
+	if (Array.isArray(effect)) {
+		if (effectsInfo[effect[0]]) {
+			let effectInfo = effectsInfo[effect[0]],
+				args = effect.slice(1);
+			
+			return effectInfo.func(info, ...(effectInfo.syntax ? args : evalEffects(info, args)));
+		}
+	} else return effect;
 }
 
 
@@ -428,16 +520,82 @@ function run(time) {
 	var d = time - (prevTime === undefined ? time: prevTime);
 	
 	
+	if (prevTime === undefined) level.objects.forEach(obj => {
+		evalEffects({
+			object: obj,
+			time,
+			delta: d
+		}, obj.onStart);
+	});
+	
+	
+	if (gameScripts.length) {
+		let finishedScripts = [];
+		
+		gameScripts.forEach(script => {
+			if (script.running) {
+				let runTime, finished;
+				
+				if (time >= script.running.end) {
+					runTime = script.running.end - script.running.start;
+					finished = true;
+				} else {
+					runTime = time - script.running.start
+				}
+				
+				if (script.running.run) script.running.run(runTime);
+				
+				if (finished) {
+					script.running.runEnd();
+					script.running = false;
+					script.index += 1;
+				} else return;
+			}
+			
+			while (script.index < script.effects.length) {
+				let result = evalEffect({
+						object: script.info.object,
+						time,
+						delta: d
+					}, script.effects[script.index]);
+				
+				if (result && result.isRunner) {
+					script.running = result;
+					result.runStart();
+					return;
+				}
+				script.index += 1;
+			}
+			
+			if (script.loop) script.index = 0;
+			else finishedScripts.push(script);
+		});
+		
+		finishedScripts.forEach(script =>
+			gameScripts.splice(gameScripts.indexOf(script), 1));
+	}
+	
+	
 	var deleteObjects = [];
 	
 	level.objects.forEach(obj => {
 		if (obj.hasGravity) {
+			/*
+			let xDir = Math.sign(obj.velX);
+			obj.velX -= drag * xDir * d;
+			if (obj.velX * xDir < 0) obj.velX = 0;
+			obj.x += obj.velX * d;
+			*/
 			obj.velY += drag * d;
 			obj.y += obj.velY * d;
 			var [objCollisions, net] = getObjectCollisions(obj);
 			if (net && obj.carriable) {
 				deleteObjects.push(obj);
-				evalEffects(obj.rewards);
+				evalEffects({
+					object: obj,
+					time,
+					delta: d
+				}, obj.rewards);
 			} else if (objCollisions.length) {
 				var modVector = getDisplacementVector(objCollisions);
 				obj.x += modVector[0];
@@ -487,10 +645,16 @@ function run(time) {
 	if (controls.claw && !claw.holding) {
 		claw.extended += clawRate * d;
 		if (claw.extended > clawMax) claw.extended = clawMax;
-	} else if (claw.holding && !controls.claw && prevControls.claw) {
+	} else if (claw.holding && claw.holding.carriable && !controls.claw && prevControls.claw) {
 		claw.updateCoords();
 		level.objects.push(claw.holding);
 		claw.holding.velY = 0;
+		/*
+		if (claw.holding.hasGravity) {
+			claw.holding.velY = ship.velY;
+			claw.holding.velX = ship.velX;
+		}
+		*/
 		claw.holding = false;
 		droppedHeldItem = true;
 	} else if (claw.holding && claw.holding.carriable) {
@@ -503,7 +667,11 @@ function run(time) {
 			if (claw.holding && !claw.holding.carriable) {
 				let obj = claw.holding;
 				claw.holding = false;
-				evalEffects(obj.rewards);
+				evalEffects({
+					object: obj,
+					time,
+					delta: d
+				}, obj.rewards);
 			}
 		}
 	}
@@ -529,17 +697,48 @@ function run(time) {
 	if (collisions.length) {
 		//ctx.fillStyle = "red";
 		let modVector = getDisplacementVector(collisions);
+		
 		ship.x += modVector[0];
 		ship.y += modVector[1];
-		let dir = [ship.velX, ship.velY];
+		
+		let vectors = [[ship.velX, ship.velY]];
+		
 		if (clawCollisions && clawCollisions.length) {
+			vectors.push([ship.velX, (!controls.claw || claw.extended === clawMax ? 0 : clawRate) + ship.velY]);
+			
+			/*
 			let clawDir = [ship.velX, (!controls.claw || claw.extended === clawMax ? 0 : clawRate) + ship.velY],
-				vel = Math.max((ship.velX ** 2) + (ship.velY ** 2), Math.sqrt((clawDir[0] ** 2) + (clawDir[1] ** 2)));
-					//nnnnnnot quite sure if this is the best way to do that
+				vel = Math.max(Math.sqrt((ship.velX ** 2) + (ship.velY ** 2)), Math.sqrt((clawDir[0] ** 2) + (clawDir[1] ** 2)));
+					
 			
 			dir = scaleVector(normalizeVector(addVectors(dir, clawDir)), vel);
+			*/
 		}
-		[ship.velX, ship.velY] = bounceVector(dir, normalizeVector(modVector));
+		
+		/*
+		collisions.forEach(collision => {
+			if (collision.transferVelX || collision.transferVelY)
+				vectors.push([collision.transferVelX || 0, collision.transferVelY || 0]);
+		});
+		*/
+		
+		let magnitude = Math.max(...vectors.map(([x, y]) => Math.sqrt((x ** 2) + (y ** 2)))),
+				//nnnnnnot quite sure if this is the best way to do that
+			dir = scaleVector(normalizeVector(addVectors(...vectors)), magnitude),
+			unitModVector = normalizeVector(modVector),
+			shipDir = bounceVector(dir, unitModVector);
+		
+		collisions.forEach(collision => {
+			if (collision.transferVelX || collision.transferVelY) {
+				let dp = dotProduct([collision.transferVelX || 0, collision.transferVelY || 0], unitModVector);
+				shipDir[0] += dp * unitModVector[0];
+				shipDir[1] += dp * unitModVector[1];
+				// i kinda doubt this is the best way to do this??
+				// i really need to figure out how this stuff should actually be done at some point
+			}
+		});
+		
+		[ship.velX, ship.velY] = shipDir;
 		//showCollisionVector(modVector);
 	} //else ctx.fillStyle = "black";
 	
