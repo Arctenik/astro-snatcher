@@ -6,9 +6,19 @@ var inp = document.querySelector("input"),
 	ctx = canvas.getContext("2d");
 
 
+var path = queryVar("level");
+if (path) {
+	inp.value = path;
+	draw(path);
+}
+
 button.onclick = () => {
+	location = "?level=" + inp.value;
+}
+
+function draw(folderPath) {
 	var r = new XMLHttpRequest();
-	r.open("get", inp.value + "/level.json");
+	r.open("get", folderPath + "/level.json");
 	r.responseType = "json";
 	r.onload = () => {
 		var level = r.response;
@@ -16,18 +26,27 @@ button.onclick = () => {
 		canvas.height = level.height;
 		ctx.fillStyle = "white";
 		ctx.fillRect(0, 0, level.width, level.height);
-		level.objects.forEach(obj => drawLevelObject(obj));
+		level.objects.forEach(obj => drawLevelObject(level.originX || 0, level.originY || 0, obj));
 	}
 	r.send();
 }
 
-function drawLevelObject(obj) {
-	drawPolygon(obj.x, obj.y, obj.vertices, obj.solid ? "gray" : (obj.collectible ? "lightgreen" : "lightgray"));
+function drawLevelObject(ox, oy, obj) {
+	drawPolygon(ox, oy, obj.x, obj.y, obj.vertices, getObjectColor(obj));
 }
 
-function drawPolygon(x, y, vertices, color) {
+function getObjectColor(obj) {
+	if (obj.solid) return "gray";
+	if (obj.carriable) return "green";
+	if (obj.collectible) return "lightgreen";
+	if (obj.energy) return "gold";
+	if (obj.net) return "aquamarine";
+	return "lightgray";
+}
+
+function drawPolygon(ox, oy, x, y, vertices, color) {
 	ctx.beginPath();
-	vertices.forEach(([vx, vy], i) => ctx[i ? "lineTo" : "moveTo"](x + vx, y + vy));
+	vertices.forEach(([vx, vy], i) => ctx[i ? "lineTo" : "moveTo"](x + vx + ox, y + vy + oy));
 	ctx.closePath();
 	ctx.fillStyle = color;
 	ctx.strokeStyle = color;
@@ -36,4 +55,12 @@ function drawPolygon(x, y, vertices, color) {
 	ctx.fill();
 	ctx.globalAlpha = 1;
 	ctx.stroke();
+}
+
+function queryVar(name) {
+	for (let item of location.search.substring(1).split("&")) {
+		let [key, val] = item.split("=");
+		if (key === name) return val;
+	}
+	return false;
 }

@@ -10,16 +10,20 @@ var canvas = document.getElementById("canvas"),
 var keyVelMax = 0.15,
 	keyVelRate = 0.003,
 	drag = 0.00003, // also functions as gravity
+	energyDragY = 0.0003,
+	energyDragX = 0.0001,
 	bounceSpeed = 0.9,
+	keyEnergyLoss = 0.002,
+	bumpEnergyLoss = 2.5,
 	clawRate = 0.1,
 	clawCarryingRate = 0.025,
 	clawMax = 64,
 	winTimeMax = 2000;
 
-var winMessage = "STAGE CLEAR";
+var winMessage = "STAGE CLEAR",
+	loseMessage = "GAME OVER";
 
-var baseImageNames = ["ship.png", "claw.png", "claw-arm.png"],
-	images = {};
+var images = {};
 
 var levelPath = "test-level",
 	level;
@@ -38,6 +42,7 @@ var controlKeys = {
 
 var score = 0,
 	winTime,
+	endMessage,
 	gameScripts = [],
 	controls = {
 		moveUp: false,
@@ -56,6 +61,15 @@ var score = 0,
 	ship = addObjectBox({
 		x: 100,
 		y: 100,
+		energyLevel: 100,
+		maxEnergy: 100,
+		energySprites: [
+			"ship-energy-0.png",
+			"ship-energy-1.png",
+			"ship-energy-2.png",
+			"ship-energy-3.png",
+			"ship-energy-4.png"
+		],
 		sprite: "ship.png",
 		spriteX: -10,
 		spriteY: -12,
@@ -121,6 +135,12 @@ function getLevel() {
 }
 
 function fillLevelProperties(level) {
+	if (!level.originX) level.originX = 0;
+	if (!level.originY) level.originY = 0;
+	level.minX = -level.originX;
+	level.maxX = level.width - level.originX;
+	level.minY = -level.originY;
+	level.maxY = level.height - level.originY;
 	level.objects.forEach(obj => {
 		addObjectBox(obj);
 		if (obj.sprites && obj.sprite === undefined) obj.sprite = Object.keys(obj.sprites)[0];
@@ -160,7 +180,10 @@ function getLevelImages() {
 }
 
 function getBaseImages() {
-	return Promise.all(baseImageNames.map(name => getImage(name)));
+	return Promise.all([
+		ship.sprite, ...ship.energySprites,
+		claw.sprite, claw.armSprite,
+	].map(name => getImage(name)));
 }
 
 function getImage(name, pathPrefix = "") {
@@ -195,15 +218,32 @@ function getObjectCollisions(obj) {
 }
 
 function getShipCollisions() {
-	var collisions = [];
+	var collisions = [],
+		energy;
+	
 	for (var i = 0; i < level.objects.length; i++) {
 		let levelObj = level.objects[i];
-		if (levelObj.solid) {
+		if (levelObj.solid || (levelObj.energy && !energy)) {
 			let collision = getSpecificCollision(ship, levelObj);
-			if (collision) collisions.push(collision);
+			if (collision) {
+				if (levelObj.energy) energy = true;
+				else collisions.push(collision);
+			}
 		}
 	}
-	return collisions;
+	
+	return [collisions, energy];
+}
+
+function getShipInEnergy() {
+	for (var i = 0; i < level.objects.length; i++) {
+		let levelObj = level.objects[i];
+		if (levelObj.energy) {
+			let collision = getSpecificInside(ship, levelObj);
+			if (collision) return true;
+		}
+	}
+	return false;
 }
 
 function getClawCollisions() {
@@ -233,9 +273,18 @@ function getSpecificCollision(a, b) { // 'a' should be the "main" object i guess
 	return result;
 }
 
+function getSpecificInside(a, b) { // determines whether 'a' is inside 'b'
+	return getRectInside(a, b) && getSatInside(a, b);
+}
+
 function getRectCollision(a, b) {
 	return segmentsIntersect1D([a.x, a.x + a.width], [b.x, b.x + b.width])
 		&& segmentsIntersect1D([a.y, a.y + a.height], [b.y, b.y + b.height]);
+}
+
+function getRectInside(a, b) {
+	return segmentInside1D([a.x, a.x + a.width], [b.x, b.x + b.width])
+		&& segmentInside1D([a.y, a.y + a.height], [b.y, b.y + b.height]);
 }
 
 function getSatCollision(a, b) {
@@ -243,6 +292,15 @@ function getSatCollision(a, b) {
 	if (c1) {
 		var c2 = getObjSatCollision(b, a, b);
 		if (c2) return [...c1, ...c2].sort((a, b) => a.amount - b.amount)[0];
+	}
+	return false;
+}
+
+function getSatInside(a, b) {
+	var c1 = getObjSatInside(a, a, b);
+	if (c1) {
+		var c2 = getObjSatInside(b, a, b);
+		if (c2) return true;
 	}
 	return false;
 }
@@ -261,8 +319,24 @@ function getObjSatCollision(linesObj, a, b) {
 	return overlaps;
 }
 
+function getObjSatInside(linesObj, a, b) {
+	for (let i = 0; i < linesObj.vertices.length; i++) {
+		let lineCollision = getLineSatInside(
+			linesObj.vertices[i],
+			linesObj.vertices[(i + 1)%linesObj.vertices.length],
+			a, b
+		);
+		if (!lineCollision) return false;
+	}
+	return true;
+}
+
 function getLineSatCollision(p1, p2, a, b) {
 	return getAxisSatCollision(normalizeVector([p1[1] - p2[1], p2[0] - p1[0]]), a, b);
+}
+
+function getLineSatInside(p1, p2, a, b) {
+	return getAxisSatInside(normalizeVector([p1[1] - p2[1], p2[0] - p1[0]]), a, b);
 }
 
 function getAxisSatCollision(axis, a, b) {
@@ -275,6 +349,15 @@ function getAxisSatCollision(axis, a, b) {
 			amount: overlapAmount(...projA, ...projB),
 			dir: overlapDir(projA, projB)
 		};
+	else return false;
+}
+
+function getAxisSatInside(axis, a, b) {
+	var projA = projectObj(a, axis),
+		projB = projectObj(b, axis);
+	
+	if (segmentInside1D(projA, projB))
+		return true;
 	else return false;
 }
 
@@ -295,6 +378,12 @@ function projectPoint(point, axis) {
 
 function segmentsIntersect1D(a, b) {
 	return a[1] >= b[0] && b[1] >= a[0];
+}
+
+function segmentInside1D(a, b) {
+	a = a.slice().sort((a, b) => a - b);
+	b = b.slice().sort((a, b) => a - b);
+	return a[0] >= b[0] && a[1] <= b[1];
 }
 
 function overlapAmount(...nums) { 
@@ -473,6 +562,7 @@ var effectsInfo = {
 	winLevel: {
 		func: function() {
 			winTime = 0;
+			endMessage = winMessage;
 		}
 	},
 	"console.log": {
@@ -586,7 +676,7 @@ function run(time) {
 			if (obj.velX * xDir < 0) obj.velX = 0;
 			obj.x += obj.velX * d;
 			*/
-			obj.velY += drag * d;
+			obj.velY += drag * d; // this should probably be sensitive to energy >.>
 			obj.y += obj.velY * d;
 			var [objCollisions, net] = getObjectCollisions(obj);
 			if (net && obj.carriable) {
@@ -608,6 +698,18 @@ function run(time) {
 	deleteObjects.forEach(obj => {
 		level.objects.splice(level.objects.indexOf(obj), 1);
 	});
+	
+	
+	
+	var inEnergy = getShipInEnergy(),
+		currentDragX = inEnergy ? energyDragX : drag,
+		currentDragY = inEnergy ? energyDragY : drag;
+	
+	
+	
+	if (controls.moveLeft || controls.moveRight || controls.moveUp || controls.moveDown) {
+		ship.energyLevel -= keyEnergyLoss * d;
+	}
 	
 	
 	
@@ -634,10 +736,10 @@ function run(time) {
 	
 	
 	var xDir = Math.sign(ship.velX);
-	ship.velX -= drag * d * xDir;
+	ship.velX -= currentDragX * d * xDir;
 	if (Math.sign(ship.velX) === -xDir) ship.velX = 0;
 	
-	ship.velY += drag * d;
+	ship.velY += currentDragY * d;
 	
 	
 	var droppedHeldItem;
@@ -680,8 +782,10 @@ function run(time) {
 	claw.updateCoords();
 	
 	
-	var shipCollisions = getShipCollisions(),
+	var [shipCollisions, touchingEnergy] = getShipCollisions(),
 		clawCollisions, clawCollectible;
+	
+	if (touchingEnergy) ship.energyLevel = ship.maxEnergy;
 	
 	if (claw.extended) [clawCollisions, clawCollectible] = getClawCollisions();
 	
@@ -746,19 +850,25 @@ function run(time) {
 	claw.updateCoords();
 	
 	
-	if (shipCollisions.length && claw.holding && claw.holding.carriable) {
-		level.objects.push(claw.holding);
-		claw.holding = false;
+	if (shipCollisions.length) {
+		
+		ship.energyLevel -= bumpEnergyLoss;
+		
+		if (claw.holding && claw.holding.carriable) {
+			level.objects.push(claw.holding);
+			claw.holding = false;
+		}
+		
 	}
 	
 	
 	camera.x = Math.round(ship.x - (camera.width/2) + (ship.width/2));
 	camera.y = Math.round(ship.y - (camera.height/2) + (ship.height/2));
 	
-	if (camera.x < 0) camera.x = 0;
-	else if (camera.x > level.width - camera.width) camera.x = level.width - camera.width;
-	if (camera.y < 0) camera.y = 0;
-	else if (camera.y > level.height - camera.height) camera.y = level.height - camera.height;
+	if (camera.x < level.minX) camera.x = level.minX;
+	else if (camera.x > level.maxX - camera.width) camera.x = level.maxX - camera.width;
+	if (camera.y < level.minY) camera.y = level.minY;
+	else if (camera.y > level.maxY - camera.height) camera.y = level.maxY - camera.height;
 	
 	
 	ctx.clearRect(0, 0, camera.width, camera.height);
@@ -781,12 +891,17 @@ function run(time) {
 	
 	drawLevelImage(images[ship.sprite], ship.x + ship.spriteX, ship.y + ship.spriteY);
 	
+	let energySpriteIndex = Math.floor((ship.energyLevel/ship.maxEnergy) * ship.energySprites.length);
+	if (energySpriteIndex >= ship.energySprites.length) energySpriteIndex = ship.energySprites.length - 1;
+	else if (energySpriteIndex < 0) energySpriteIndex = 0;
+	drawLevelImage(images[ship.energySprites[energySpriteIndex]], ship.x + ship.spriteX, ship.y + ship.spriteY);
+	
 	if (claw.holding) drawLevelObject(claw.holding);
 	
 	drawLevel();
 	
 	if (level.foreground)
-		ctx.drawImage(images[level.foreground], -camera.x, -camera.y);
+		ctx.drawImage(images[level.foreground], level.minX-camera.x, level.minY-camera.y);
 	
 	
 	if (hitboxInp.checked) drawHitboxes();
@@ -795,14 +910,20 @@ function run(time) {
 	scoreElem.textContent = score;
 	
 	
+	if (ship.energyLevel < 0 && winTime === undefined) {
+		winTime = 0;
+		endMessage = loseMessage;
+	}
+	
+	
 	if (winTime !== undefined) {
 		ctx.fillStyle = `rgba(0, 0, 0, ${(winTime > winTimeMax ? winTimeMax : winTime)/winTimeMax})`;
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 		ctx.font = "50px sans-serif";
 		ctx.fillStyle = "yellow";
-		let width = ctx.measureText(winMessage).width,
+		let width = ctx.measureText(endMessage).width,
 			messageY = (canvas.height + 50)/2;
-		ctx.fillText(winMessage, (canvas.width - width)/2, messageY);
+		ctx.fillText(endMessage, (canvas.width - width)/2, messageY);
 		if (winTime > winTimeMax/2) {
 			let scoreMessage = "Score: " + score;
 			ctx.font = "30px sans-serif";
