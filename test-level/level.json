@@ -1,6 +1,7 @@
 {
-	"width": 800,
+	"width": 1200,
 	"height": 800,
+	"originX": 400,
 	"background": "background.png",
 	"foreground": "foreground.png",
 	"objects": [
@@ -22,6 +23,7 @@
 				[0, 40]
 			]
 		},
+		
 		{
 			"solid": true,
 			"x": 680,
@@ -45,6 +47,7 @@
 				[0, 30]
 			]
 		},
+		
 		{
 			"collectible": true,
 			"rewards": [["addScore", 25]],
@@ -88,31 +91,73 @@
 				[0, 20]
 			]
 		},
+		
+		{
+			"x": -350,
+			"y": 50,
+			"energy": true,
+			"sprites": {
+				"main": {
+					"src": "energy.png",
+					"x": -9,
+					"y": -1
+				}
+			},
+			"vertices": [
+				[0, 0],
+				[350, 0],
+				[350, 200],
+				[0, 200]
+			]
+		},
+		
 		{
 			"solid": true,
-			"x": 0,
+			"x": -400,
 			"y": 0,
 			"vertices": [
 				[0, 0],
-				[800, 0],
-				[800, 50],
+				[1200, 0],
+				[1200, 50],
 				[0, 50]
 			]
 		},
 		{
 			"solid": true,
-			"x": 0,
+			"x": -400,
 			"y": 750,
 			"vertices": [
 				[0, 0],
-				[800, 0],
-				[800, 50],
+				[1200, 0],
+				[1200, 50],
 				[0, 50]
 			]
 		},
 		{
 			"solid": true,
 			"x": 0,
+			"y": 50,
+			"vertices": [
+				[0, 0],
+				[50, 0],
+				[50, 270],
+				[0, 270]
+			]
+		},
+		{
+			"solid": true,
+			"x": 0,
+			"y": 570,
+			"vertices": [
+				[0, 0],
+				[50, 0],
+				[50, 180],
+				[0, 180]
+			]
+		},
+		{
+			"solid": true,
+			"x": -400,
 			"y": 50,
 			"vertices": [
 				[0, 0],
