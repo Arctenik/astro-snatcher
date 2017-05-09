@@ -4,6 +4,30 @@
 	"originX": 400,
 	"background": "background.png",
 	"foreground": "foreground.png",
+	"startX": 100,
+	"startY": 100,
+	"images": ["bubble.png"],
+	"variables": {
+		"bubble": {
+			"bubble": true,
+			"dragMultiplierY": -1,
+			"solidCollisions": true,
+			"bounceMultiplier": 1,
+			"sprites": {
+				"main": {
+					"src": "bubble.png",
+					"x": -4,
+					"y": -4
+				}
+			},
+			"vertices": [
+				[0, 0],
+				[50, 0],
+				[50, 50],
+				[0, 50]
+			]
+		}
+	},
 	"objects": [
 		{
 			"net": true,
@@ -22,6 +46,24 @@
 				[165, 40],
 				[0, 40]
 			]
+		},
+		
+		{
+			"x": -254,
+			"y": 663,
+			"onStart": [
+				["gameLoop",
+					["wait", 12500],
+					["create", ["var", "bubble"], ["relativeX", 60], ["relativeY", -20]]]
+			],
+			"sprites": {
+				"main": {
+					"src": "vent.png",
+					"x": 0,
+					"y": 0
+				}
+			},
+			"vertices": []
 		},
 		
 		{
@@ -70,7 +112,8 @@
 		{
 			"collectible": true,
 			"carriable": true,
-			"hasGravity": true,
+			"dragMultiplierY": 1,
+			"solidCollisions": true,
 			"rewards": [
 				["addScore", 300],
 				["winLevel"]

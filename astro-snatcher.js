@@ -128,6 +128,8 @@ function getLevel() {
 		r.responseType = "json";
 		r.onload = () => {
 			level = fillLevelProperties(r.response);
+			if (level.startX !== undefined) ship.x = level.startX;
+			if (level.startY !== undefined) ship.y = level.startY;
 			getLevelImages().then(resolve);
 		}
 		r.send();
@@ -141,15 +143,20 @@ function fillLevelProperties(level) {
 	level.maxX = level.width - level.originX;
 	level.minY = -level.originY;
 	level.maxY = level.height - level.originY;
-	level.objects.forEach(obj => {
-		addObjectBox(obj);
-		if (obj.sprites && obj.sprite === undefined) obj.sprite = Object.keys(obj.sprites)[0];
-		if (obj.hasGravity) {
-			obj.velY = 0;
-			//obj.velX = 0;
-		}
-	});
+	level.objects.forEach(obj => fillObjectProperties(obj));
 	return level;
+}
+
+function fillObjectProperties(obj) {
+	addObjectBox(obj);
+	if (obj.sprites && obj.sprite === undefined) obj.sprite = Object.keys(obj.sprites)[0];
+	if (!(obj.dragMultiplierX === undefined && obj.dragMultiplierY === undefined)) {
+		if (obj.dragMultiplierX === undefined) obj.dragMultiplierX = 1;
+		if (obj.dragMultiplierY === undefined) obj.dragMultiplierY = 1;
+		obj.velY = 0;
+		obj.velX = 0;
+	}
+	if (obj.solidCollisions) obj.bounceMultiplier = obj.bounceMultiplier || 0;
 }
 
 function addObjectBox(obj) {
@@ -170,6 +177,7 @@ function addObjectBox(obj) {
 function getLevelImages() {
 	return new Promise(resolve => {
 		var imageNames = [];
+		if (level.images) imageNames.push(...level.images);
 		if (level.background) imageNames.push(level.background);
 		if (level.foreground) imageNames.push(level.foreground);
 		level.objects.forEach(obj => {
@@ -201,20 +209,21 @@ function getImage(name, pathPrefix = "") {
 
 function getObjectCollisions(obj) {
 	var collisions = [],
-		net;
+		net, energy;
 	
 	for (var i = 0; i < level.objects.length; i++) {
 		let levelObj = level.objects[i];
-		if (obj !== levelObj && (levelObj.solid || (levelObj.net && !net))) {
+		if (obj !== levelObj && (levelObj.solid || (levelObj.net && !net) || (levelObj.energy && !energy))) {
 			let collision = getSpecificCollision(obj, levelObj);
 			if (collision) {
 				if (levelObj.net) net = levelObj;
+				else if (levelObj.energy) energy = true;
 				else collisions.push(collision);
 			}
 		}
 	}
 	
-	return [collisions, net];
+	return [collisions, net, energy];
 }
 
 function getShipCollisions() {
@@ -411,10 +420,10 @@ function getDisplacementVector(collisions) {
 	return modVector;
 }
 
-function bounceVector(vec, mirrorVec) {
+function bounceVector(vec, mirrorVec, scale = bounceSpeed) {
 	// mirrorVec should be a unit vector i guess??
 	// formula taken from http://www.3dkingdoms.com/weekly/weekly.php?a=2
-	return scaleVector(addVectors(scaleVector(mirrorVec, -2 * dotProduct(vec, mirrorVec)), vec), bounceSpeed);
+	return scaleVector(addVectors(scaleVector(mirrorVec, -2 * dotProduct(vec, mirrorVec)), vec), scale);
 }
 
 function dotProduct(a, b) {
@@ -498,6 +507,20 @@ function drawPolygon(x, y, vertices, color) {
 
 
 
+function copyObject(obj) {
+	var result = {};
+	for (let key in obj) {
+		let val = obj[key];
+		if (Array.isArray(val)) result[key] = val.slice();
+		else if (val && typeof val === "object")
+			result[key] = copyObject(val);
+		else result[key] = val;
+	}
+	return result;
+}
+
+
+
 var effectsInfo = {
 	gameScript: {
 		syntax: true,
@@ -552,6 +575,30 @@ var effectsInfo = {
 					info.object.y = prevY + (fraction * lengthY);
 				}
 			}
+		}
+	},
+	create: {
+		func: function(i, obj, x, y) {
+			obj = copyObject(obj);
+			fillObjectProperties(obj);
+			obj.x = x;
+			obj.y = y;
+			level.objects.push(obj);
+		}
+	},
+	var: {
+		func: function(i, name) {
+			return level.variables[name];
+		}
+	},
+	relativeX: {
+		func: function(info, coord) {
+			return info.object.x + coord;
+		}
+	},
+	relativeY: {
+		func: function(info, coord) {
+			return info.object.y + coord;
 		}
 	},
 	addScore: {
@@ -636,7 +683,7 @@ function run(time) {
 				if (script.running.run) script.running.run(runTime);
 				
 				if (finished) {
-					script.running.runEnd();
+					if (script.running.runEnd) script.running.runEnd();
 					script.running = false;
 					script.index += 1;
 				} else return;
@@ -651,7 +698,7 @@ function run(time) {
 				
 				if (result && result.isRunner) {
 					script.running = result;
-					result.runStart();
+					if (result.runStart) result.runStart();
 					return;
 				}
 				script.index += 1;
@@ -669,16 +716,20 @@ function run(time) {
 	var deleteObjects = [];
 	
 	level.objects.forEach(obj => {
-		if (obj.hasGravity) {
-			/*
+		if (obj.dragMultiplierX !== undefined) {
 			let xDir = Math.sign(obj.velX);
-			obj.velX -= drag * xDir * d;
+			obj.velX -= drag * obj.dragMultiplierX * xDir * d;
 			if (obj.velX * xDir < 0) obj.velX = 0;
 			obj.x += obj.velX * d;
-			*/
-			obj.velY += drag * d; // this should probably be sensitive to energy >.>
+		}
+		
+		if (obj.dragMultiplierY !== undefined) {
+			obj.velY += drag * obj.dragMultiplierY * d; // this should probably be sensitive to energy >.>
 			obj.y += obj.velY * d;
-			var [objCollisions, net] = getObjectCollisions(obj);
+		}
+		
+		if (obj.solidCollisions) { // the net + bubble stuff needs to be moved to a separate thing....
+			var [objCollisions, net, energy] = getObjectCollisions(obj);
 			if (net && obj.carriable) {
 				deleteObjects.push(obj);
 				evalEffects({
@@ -686,11 +737,18 @@ function run(time) {
 					time,
 					delta: d
 				}, obj.rewards);
+			} else if (obj.bubble) {
+				if (energy) {
+					deleteObjects.push(obj);
+				} else if (getSpecificCollision(obj, ship)) {
+					ship.energyLevel = ship.maxEnergy;
+					deleteObjects.push(obj);
+				} 
 			} else if (objCollisions.length) {
 				var modVector = getDisplacementVector(objCollisions);
 				obj.x += modVector[0];
 				obj.y += modVector[1];
-				obj.velY = 0;
+				[obj.velX, obj.velY] = bounceVector([obj.velX, obj.velY], normalizeVector(modVector), obj.bounceMultiplier * bounceSpeed);
 			}
 		}
 	});
@@ -750,13 +808,8 @@ function run(time) {
 	} else if (claw.holding && claw.holding.carriable && !controls.claw && prevControls.claw) {
 		claw.updateCoords();
 		level.objects.push(claw.holding);
-		claw.holding.velY = 0;
-		/*
-		if (claw.holding.hasGravity) {
-			claw.holding.velY = ship.velY;
-			claw.holding.velX = ship.velX;
-		}
-		*/
+		if (claw.holding.dragMultiplierX !== undefined) claw.holding.velX = 0;
+		if (claw.holding.dragMultiplierY !== undefined) claw.holding.velY = 0;
 		claw.holding = false;
 		droppedHeldItem = true;
 	} else if (claw.holding && claw.holding.carriable) {
