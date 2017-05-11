@@ -23,7 +23,8 @@ var keyVelMax = 0.15,
 var winMessage = "STAGE CLEAR",
 	loseMessage = "GAME OVER";
 
-var images = {};
+var images = {},
+	objects = {};
 
 var levelPath = "test-level",
 	level;
@@ -137,13 +138,22 @@ function getLevel() {
 }
 
 function fillLevelProperties(level) {
+	level.objects = [];
 	if (!level.originX) level.originX = 0;
 	if (!level.originY) level.originY = 0;
 	level.minX = -level.originX;
 	level.maxX = level.width - level.originX;
 	level.minY = -level.originY;
 	level.maxY = level.height - level.originY;
-	level.objects.forEach(obj => fillObjectProperties(obj));
+	level.initObjects.forEach(({name, object: obj}) => {
+		fillObjectProperties(obj);
+		objects[name] = obj;
+		level.objects.push(obj);
+	});
+	level.reservedObjects.forEach(({name, object: obj}) => {
+		fillObjectProperties(obj);
+		objects[name] = obj;
+	});
 	return level;
 }
 
@@ -176,14 +186,14 @@ function addObjectBox(obj) {
 
 function getLevelImages() {
 	return new Promise(resolve => {
-		var imageNames = [];
-		if (level.images) imageNames.push(...level.images);
-		if (level.background) imageNames.push(level.background);
-		if (level.foreground) imageNames.push(level.foreground);
-		level.objects.forEach(obj => {
-			if (obj.sprites) imageNames.push(...Object.values(obj.sprites).map(({src}) => src));
+		var imageNames = [],
+			imageUrls = [];
+		
+		if (level.images) level.images.forEach(({name, src}) => {
+			imageNames.push(name);
+			imageUrls.push(src);
 		});
-		Promise.all(imageNames.map(name => getImage(name, levelPath + "/"))).then(resolve);
+		Promise.all(imageNames.map((name, i) => getImage(name, imageUrls[i], levelPath + "/"))).then(resolve);
 	});
 }
 
@@ -194,14 +204,14 @@ function getBaseImages() {
 	].map(name => getImage(name)));
 }
 
-function getImage(name, pathPrefix = "") {
+function getImage(name, src = name, pathPrefix = "") {
 	return new Promise(resolve => {
 		var img = new Image();
 		img.onload = () => {
 			images[name] = img;
 			resolve();
 		}
-		img.src = pathPrefix + name;
+		img.src = pathPrefix + src;
 	});
 }
 
@@ -459,7 +469,7 @@ function drawLevel() {
 function drawLevelObject(obj) {
 	if (obj.sprite !== undefined) {
 		let sprite = obj.sprites[obj.sprite];
-		drawLevelImage(images[sprite.src], obj.x + sprite.x, obj.y + sprite.y);
+		drawLevelImage(images[sprite.image], obj.x + sprite.x, obj.y + sprite.y);
 	}
 }
 
@@ -577,6 +587,7 @@ var effectsInfo = {
 			}
 		}
 	},
+	/*
 	create: {
 		func: function(i, obj, x, y) {
 			obj = copyObject(obj);
@@ -586,11 +597,26 @@ var effectsInfo = {
 			level.objects.push(obj);
 		}
 	},
+	*/
+	copy: {
+		func: function(i, src /* parameters for properties and scripts to come */) {
+			return copyObject(typeof src === "string" ? objects[src] : src);
+		}
+	},
+	insert: {
+		func: function(i, obj, x, y) {
+			if (x !== undefined) obj.x = x;
+			if (y !== undefined) obj.y = y;
+			level.objects.push(obj);
+		}
+	},
+	/*
 	var: {
 		func: function(i, name) {
 			return level.variables[name];
 		}
 	},
+	*/
 	relativeX: {
 		func: function(info, coord) {
 			return info.object.x + coord;
@@ -631,7 +657,7 @@ function evalEffect(info, effect) {
 				args = effect.slice(1);
 			
 			return effectInfo.func(info, ...(effectInfo.syntax ? args : evalEffects(info, args)));
-		}
+		} else console.error("Unknown effect " + JSON.stringify(effect[0]));
 	} else return effect;
 }
 
