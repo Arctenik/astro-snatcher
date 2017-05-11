@@ -21,14 +21,17 @@ function draw(folderPath) {
 	r.open("get", folderPath + "/level.json");
 	r.responseType = "json";
 	r.onload = () => {
-		var level = r.response;
-		canvas.width = level.width;
-		canvas.height = level.height;
-		ctx.fillStyle = "white";
-		ctx.fillRect(0, 0, level.width, level.height);
-		level.objects.forEach(obj => drawLevelObject(level.originX || 0, level.originY || 0, obj));
+		drawLevel(r.response);
 	}
 	r.send();
+}
+
+function drawLevel(level) {
+	canvas.width = level.width;
+	canvas.height = level.height;
+	ctx.fillStyle = "white";
+	ctx.fillRect(0, 0, level.width, level.height);
+	level.objects.forEach(obj => drawLevelObject(level.originX || 0, level.originY || 0, obj));
 }
 
 function drawLevelObject(ox, oy, obj) {
@@ -36,11 +39,13 @@ function drawLevelObject(ox, oy, obj) {
 }
 
 function getObjectColor(obj) {
-	if (obj.solid) return "gray";
 	if (obj.carriable) return "green";
 	if (obj.collectible) return "lightgreen";
 	if (obj.energy) return "gold";
+	if (obj.bubble) return "goldenrod";
 	if (obj.net) return "aquamarine";
+	if (obj.onStart) return "darkorchid";
+	if (obj.solid) return "gray";
 	return "lightgray";
 }
 
