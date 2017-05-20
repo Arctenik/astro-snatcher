@@ -24,6 +24,8 @@ var winMessage = "STAGE CLEAR",
 	loseMessage = "GAME OVER";
 
 var images = {},
+	namedImages = {},
+	scriptCallbacks = {},
 	objects = {};
 
 var levelPath = "test-level",
@@ -97,7 +99,7 @@ var score = 0,
 		spriteY: -2,
 		armSprite: "claw-arm.png",
 		armSpriteX: 3, // (relative to claw position)
-		armSpriteEnds: 5, // (amount that it continues beyond the "actual" arm on either side)
+		armSpriteEnds: 5, // (amount that it continues beyond the "actual" arm on either end)
 		vertices: [
 			[0, 0],
 			[16, 0],
@@ -128,7 +130,8 @@ function getLevel() {
 		r.open("get", levelPath + "/level.json");
 		r.responseType = "json";
 		r.onload = () => {
-			readLevel(r.response);
+			level = new Level(r.response);
+			getLevelImages().then(() => getLevelScripts().then(resolve));
 			/*
 			level = fillLevelProperties(r.response);
 			if (level.startX !== undefined) ship.x = level.startX;
@@ -140,6 +143,25 @@ function getLevel() {
 	});
 }
 
+
+function Level(src) {
+	Object.assign(this, fillLevelProperties(readLevel(src)));
+}
+
+Level.prototype = {
+	
+}
+
+
+function GameObject(src) {
+	Object.assign(this, fillObjectProperties(src));
+}
+
+GameObject.prototype = {
+	
+}
+
+
 function fillLevelProperties(level) {
 	level.objects = [];
 	if (!level.originX) level.originX = 0;
@@ -149,20 +171,20 @@ function fillLevelProperties(level) {
 	level.minY = -level.originY;
 	level.maxY = level.height - level.originY;
 	level.initObjects.forEach(({name, object: obj}) => {
-		fillObjectProperties(obj);
+		obj = new GameObject(obj);
 		objects[name] = obj;
 		level.objects.push(obj);
 	});
 	level.reservedObjects.forEach(({name, object: obj}) => {
-		fillObjectProperties(obj);
+		obj = new GameObject(obj);
 		objects[name] = obj;
 	});
 	return level;
 }
 
 function fillObjectProperties(obj) {
-	addObjectBox(obj);
-	if (obj.sprites && obj.sprite === undefined) obj.sprite = Object.keys(obj.sprites)[0];
+	//addObjectBox(obj);
+	//if (obj.sprites && obj.sprite === undefined) obj.sprite = Object.keys(obj.sprites)[0];
 	if (!(obj.dragMultiplierX === undefined && obj.dragMultiplierY === undefined)) {
 		if (obj.dragMultiplierX === undefined) obj.dragMultiplierX = 1;
 		if (obj.dragMultiplierY === undefined) obj.dragMultiplierY = 1;
@@ -170,6 +192,7 @@ function fillObjectProperties(obj) {
 		obj.velX = 0;
 	}
 	if (obj.solidCollisions) obj.bounceMultiplier = obj.bounceMultiplier || 0;
+	return obj;
 }
 
 function addObjectBox(obj) {
@@ -189,14 +212,7 @@ function addObjectBox(obj) {
 
 function getLevelImages() {
 	return new Promise(resolve => {
-		var imageNames = [],
-			imageUrls = [];
-		
-		if (level.images) level.images.forEach(({name, src}) => {
-			imageNames.push(name);
-			imageUrls.push(src);
-		});
-		Promise.all(imageNames.map((name, i) => getImage(name, imageUrls[i], levelPath + "/"))).then(resolve);
+		Promise.all(level.images.map(info => getImage(info, levelPath + "/"))).then(resolve);
 	});
 }
 
@@ -204,17 +220,42 @@ function getBaseImages() {
 	return Promise.all([
 		ship.sprite, ...ship.energySprites,
 		claw.sprite, claw.armSprite,
-	].map(name => getImage(name)));
+	].map(src => getImage({src})));
 }
 
-function getImage(name, src = name, pathPrefix = "") {
+function getImage(info, pathPrefix = "") {
+	var name = info.name,
+		src = info.src;
+	
 	return new Promise(resolve => {
 		var img = new Image();
 		img.onload = () => {
-			images[name] = img;
+			images[src] = img;
+			if (name) namedImages[name] = info;
 			resolve();
 		}
 		img.src = pathPrefix + src;
+	});
+}
+
+
+function getLevelScripts() {
+	return new Promise(resolve => {
+		Promise.all(level.scripts.map(url => new Promise(resolve => {
+			var r = new XMLHttpRequest();
+			r.open("get", levelPath + "/" + url);
+			r.onload = () => resolve(r.responseText);
+			r.send();
+		}))).then(scripts => {
+			var globalEval = eval;
+			scripts.forEach(script => {
+				var scriptFunc = globalEval(script),
+					scriptResult = scriptFunc(level, objects);
+				
+				Object.assign(scriptCallbacks, scriptResult.callbacks);
+			});
+			resolve();
+		});
 	});
 }
 
@@ -470,10 +511,17 @@ function drawLevel() {
 }
 
 function drawLevelObject(obj) {
+	obj.sprites.forEach(sprite => {
+		if (sprite.active) {
+			drawLevelImage(images[sprite.image.src], obj.x + sprite.x, obj.y + sprite.y);
+		}
+	});
+	/*
 	if (obj.sprite !== undefined) {
 		let sprite = obj.sprites[obj.sprite];
 		drawLevelImage(images[sprite.image], obj.x + sprite.x, obj.y + sprite.y);
 	}
+	*/
 }
 
 function drawLevelImage(...args) {
@@ -682,7 +730,6 @@ var prevTime;
 getBaseImages().then(() => getLevel().then(() => requestAnimationFrame(run)));
 
 function run(time) {
-	
 	var d = time - (prevTime === undefined ? time: prevTime);
 	
 	

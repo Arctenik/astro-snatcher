@@ -706,18 +706,16 @@
             {
              "bounce multiplier":1,
              "drag multiplier y":-1,
-             "reserved":true,
              "solid collisions":true
             },
          "propertytypes":
             {
              "bounce multiplier":"int",
              "drag multiplier y":"float",
-             "reserved":"bool",
              "solid collisions":"bool"
             },
          "type":"group",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -751,6 +749,14 @@
         }],
  "nextobjectid":12,
  "orientation":"orthogonal",
+ "properties":
+    {
+     "script":"level.js"
+    },
+ "propertytypes":
+    {
+     "script":"file"
+    },
  "renderorder":"right-down",
  "tileheight":800,
  "tilesets":[],
