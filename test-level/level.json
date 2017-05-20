@@ -1,328 +1,761 @@
-{
-	"width": 1200,
-	"height": 800,
-	"originX": 400,
-	"background": "background",
-	"foreground": "foreground",
-	"startX": 100,
-	"startY": 100,
-	"images": [
-		{"name": "background", "src": "background.png"},
-		{"name": "foreground", "src": "foreground.png"},
-		{"name": "treasure", "src": "treasure.png"},
-		{"name": "trinket", "src": "trinket.png"},
-		{"name": "net", "src": "net.png"},
-		{"name": "alien", "src": "alien.png"},
-		{"name": "energy", "src": "energy.png"},
-		{"name": "vent", "src": "vent.png"},
-		{"name": "bubble", "src": "bubble.png"}
-	],
-	"reservedObjects": [
-		{
-			"name": "bubble",
-			"object": {
-				"bubble": true,
-				"dragMultiplierY": -1,
-				"solidCollisions": true,
-				"bounceMultiplier": 1,
-				"sprites": {
-					"main": {
-						"image": "bubble",
-						"x": -4,
-						"y": -4
-					}
-				},
-				"vertices": [
-					[0, 0],
-					[50, 0],
-					[50, 50],
-					[0, 50]
-				]
-			}
-		}
-	],
-	"initObjects": [
-		{
-			"object": {
-				"net": true,
-				"x": 80,
-				"y": 294,
-				"sprites": {
-					"main": {
-						"image": "net",
-						"x": -52,
-						"y": -74
-					}
-				},
-				"vertices": [
-					[0, 0],
-					[165, 0],
-					[165, 40],
-					[0, 40]
-				]
-			}
-		},
-			
-		{
-			"object": {
-				"x": -254,
-				"y": 663,
-				"onStart": [
-					["gameLoop",
-						["wait", 12500],
-						["insert", ["copy", "bubble"], ["relativeX", 60], ["relativeY", -20]]]
-				],
-				"sprites": {
-					"main": {
-						"image": "vent",
-						"x": 0,
-						"y": 0
-					}
-				},
-				"vertices": []
-			}
-		},
-			
-		{
-			"object": {
-				"solid": true,
-				"x": 680,
-				"y": 250,
-				"onStart": [
-					["gameLoop", 
-						["slideTo", 590, 400, 2000],
-						["slideTo", 680, 250, 2000]]
-				],
-				"sprites": {
-					"main": {
-						"image": "alien",
-						"x": -17,
-						"y": -7
-					}
-				},
-				"vertices": [
-					[0, 0],
-					[30, 0],
-					[30, 30],
-					[0, 30]
-				]
-			}
-		},
-			
-		{
-			"object": {
-				"collectible": true,
-				"rewards": [["addScore", 25]],
-				"x": 300,
-				"y": 735,
-				"sprites": {
-					"main": {
-						"image": "trinket",
-						"x": -3,
-						"y": -3
-					}
-				},
-				"vertices": [
-					[0, 0],
-					[10, 0],
-					[10, 10],
-					[0, 10]
-				]
-			}
-		},
-		{
-			"object": {
-				"collectible": true,
-				"carriable": true,
-				"dragMultiplierY": 1,
-				"solidCollisions": true,
-				"rewards": [
-					["addScore", 300],
-					["winLevel"]
-				],
-				"x": 465,
-				"y": 355,
-				"sprites": {
-					"main": {
-						"image": "treasure",
-						"x": -5,
-						"y": -5
-					}
-				},
-				"vertices": [
-					[0, 0],
-					[20, 0],
-					[20, 20],
-					[0, 20]
-				]
-			}
-		},
-			
-		{
-			"object": {
-				"x": -350,
-				"y": 50,
-				"energy": true,
-				"sprites": {
-					"main": {
-						"image": "energy",
-						"x": -9,
-						"y": -1
-					}
-				},
-				"vertices": [
-					[0, 0],
-					[350, 0],
-					[350, 200],
-					[0, 200]
-				]
-			}
-		},
-			
-		{
-			"object": {
-				"solid": true,
-				"x": -400,
-				"y": 0,
-				"vertices": [
-					[0, 0],
-					[1200, 0],
-					[1200, 50],
-					[0, 50]
-				]
-			}
-		},
-		{
-			"object": {
-				"solid": true,
-				"x": -400,
-				"y": 750,
-				"vertices": [
-					[0, 0],
-					[1200, 0],
-					[1200, 50],
-					[0, 50]
-				]
-			}
-		},
-		{
-			"object": {
-				"solid": true,
-				"x": 0,
-				"y": 50,
-				"vertices": [
-					[0, 0],
-					[50, 0],
-					[50, 270],
-					[0, 270]
-				]
-			}
-		},
-		{
-			"object": {
-				"solid": true,
-				"x": 0,
-				"y": 570,
-				"vertices": [
-					[0, 0],
-					[50, 0],
-					[50, 180],
-					[0, 180]
-				]
-			}
-		},
-		{
-			"object": {
-				"solid": true,
-				"x": -400,
-				"y": 50,
-				"vertices": [
-					[0, 0],
-					[50, 0],
-					[50, 700],
-					[0, 700]
-				]
-			}
-		},
-		{
-			"object": {
-				"solid": true,
-				"x": 750,
-				"y": 50,
-				"vertices": [
-					[0, 0],
-					[50, 0],
-					[50, 700],
-					[0, 700]
-				]
-			}
-		},
-			
-		{
-			"object": {
-				"solid": true,
-				"x": 265,
-				"y": 50,
-				"vertices": [
-					[0, 0],
-					[95, 0],
-					[10, 240]
-				]
-			}
-		},
-		{
-			"object": {
-				"solid": true,
-				"x": 250,
-				"y": 50,
-				"vertices": [
-					[110, 0],
-					[15, 475],
-					[0, 370],
-					[25, 240]
-				]
-			}
-		},
-			
-		{
-			"object": {
-				"solid": true,
-				"x": 490,
-				"y": 240,
-				"vertices": [
-					[70, 0],
-					[125, 40],
-					[65, 175],
-					[20, 210],
-					[0, 135]
-				]
-			}
-		},
-		{
-			"object": {
-				"solid": true,
-				"x": 415,
-				"y": 375,
-				"vertices": [
-					[95, 75],
-					[5, 80],
-					[0, 25],
-					[75, 0]
-				]
-			}
-		},
-		{
-			"object": {
-				"solid": true,
-				"x": 510,
-				"y": 415,
-				"vertices": [
-					[45, 0],
-					[70, 190],
-					[20, 205],
-					[0, 35]
-				]
-			}
-		}
-	]
+{ "height":1,
+ "layers":[
+        {
+         "image":"background.png",
+         "name":"bg",
+         "opacity":1,
+         "properties":
+            {
+             "parallax":0
+            },
+         "propertytypes":
+            {
+             "parallax":"float"
+            },
+         "type":"imagelayer",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "layers":[
+                {
+                 "image":"net.png",
+                 "name":"net",
+                 "offsetx":422.666666666667,
+                 "offsety":118.666666666667,
+                 "opacity":1,
+                 "type":"imagelayer",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }, 
+                {
+                 "draworder":"topdown",
+                 "name":"net",
+                 "objects":[
+                        {
+                         "height":34.6666666666667,
+                         "id":9,
+                         "name":"",
+                         "rotation":0,
+                         "type":"",
+                         "visible":true,
+                         "width":162.666666666667,
+                         "x":474.666666666667,
+                         "y":196
+                        }],
+                 "opacity":1,
+                 "type":"objectgroup",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }],
+         "name":"net",
+         "opacity":1,
+         "properties":
+            {
+             "net":true
+            },
+         "propertytypes":
+            {
+             "net":"bool"
+            },
+         "type":"group",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "layers":[
+                {
+                 "image":"energy.png",
+                 "name":"energy",
+                 "offsetx":33.3333333333334,
+                 "offsety":58.6666666666666,
+                 "opacity":1,
+                 "type":"imagelayer",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }, 
+                {
+                 "draworder":"topdown",
+                 "name":"energy",
+                 "objects":[
+                        {
+                         "height":216,
+                         "id":11,
+                         "name":"",
+                         "rotation":0,
+                         "type":"",
+                         "visible":true,
+                         "width":365.333333333333,
+                         "x":41.3333333333333,
+                         "y":48
+                        }],
+                 "opacity":1,
+                 "type":"objectgroup",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }],
+         "name":"energy",
+         "opacity":1,
+         "properties":
+            {
+             "energy":true
+            },
+         "propertytypes":
+            {
+             "energy":"bool"
+            },
+         "type":"group",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "image":"foreground.png",
+         "name":"fg",
+         "opacity":1,
+         "type":"imagelayer",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "layers":[
+                {
+                 "draworder":"topdown",
+                 "name":"terrain",
+                 "objects":[
+                        {
+                         "height":0,
+                         "id":2,
+                         "name":"",
+                         "polygon":[
+                                {
+                                 "x":0,
+                                 "y":0
+                                }, 
+                                {
+                                 "x":393.333333333333,
+                                 "y":-5.33333333333333
+                                }, 
+                                {
+                                 "x":398.666666666667,
+                                 "y":265.333333333333
+                                }, 
+                                {
+                                 "x":428,
+                                 "y":274.666666666667
+                                }, 
+                                {
+                                 "x":456,
+                                 "y":260
+                                }, 
+                                {
+                                 "x":444,
+                                 "y":149.333333333333
+                                }, 
+                                {
+                                 "x":457.333333333333,
+                                 "y":-6.66666666666666
+                                }, 
+                                {
+                                 "x":584,
+                                 "y":-5.33333333333333
+                                }, 
+                                {
+                                 "x":666.666666666667,
+                                 "y":16
+                                }, 
+                                {
+                                 "x":673.333333333333,
+                                 "y":240
+                                }, 
+                                {
+                                 "x":642.666666666667,
+                                 "y":357.333333333333
+                                }, 
+                                {
+                                 "x":662.666666666667,
+                                 "y":466.666666666667
+                                }, 
+                                {
+                                 "x":678.666666666667,
+                                 "y":450.666666666667
+                                }, 
+                                {
+                                 "x":693.333333333333,
+                                 "y":306.666666666667
+                                }, 
+                                {
+                                 "x":738.666666666667,
+                                 "y":164
+                                }, 
+                                {
+                                 "x":760,
+                                 "y":0
+                                }, 
+                                {
+                                 "x":1140,
+                                 "y":-9.33333333333333
+                                }, 
+                                {
+                                 "x":1154.66666666667,
+                                 "y":20
+                                }, 
+                                {
+                                 "x":1136,
+                                 "y":164
+                                }, 
+                                {
+                                 "x":1157.33333333333,
+                                 "y":285.333333333333
+                                }, 
+                                {
+                                 "x":1134.66666666667,
+                                 "y":445.333333333333
+                                }, 
+                                {
+                                 "x":1158.66666666667,
+                                 "y":577.333333333333
+                                }, 
+                                {
+                                 "x":1134.66666666667,
+                                 "y":742.666666666667
+                                }, 
+                                {
+                                 "x":1200,
+                                 "y":742.666666666667
+                                }, 
+                                {
+                                 "x":1200,
+                                 "y":-57.3333333333333
+                                }, 
+                                {
+                                 "x":0,
+                                 "y":-57.3333333333333
+                                }],
+                         "rotation":0,
+                         "type":"",
+                         "visible":true,
+                         "width":0,
+                         "x":0,
+                         "y":57.3333333333333
+                        }, 
+                        {
+                         "height":0,
+                         "id":3,
+                         "name":"",
+                         "polygon":[
+                                {
+                                 "x":0,
+                                 "y":0
+                                }, 
+                                {
+                                 "x":-8,
+                                 "y":696
+                                }, 
+                                {
+                                 "x":21.3333333333333,
+                                 "y":717.333333333333
+                                }, 
+                                {
+                                 "x":336,
+                                 "y":709.333333333333
+                                }, 
+                                {
+                                 "x":345.333333333333,
+                                 "y":524
+                                }, 
+                                {
+                                 "x":397.333333333333,
+                                 "y":534.666666666667
+                                }, 
+                                {
+                                 "x":384,
+                                 "y":668
+                                }, 
+                                {
+                                 "x":402.666666666667,
+                                 "y":713.333333333333
+                                }, 
+                                {
+                                 "x":524,
+                                 "y":700
+                                }, 
+                                {
+                                 "x":601.333333333333,
+                                 "y":716
+                                }, 
+                                {
+                                 "x":800,
+                                 "y":712
+                                }, 
+                                {
+                                 "x":881.333333333333,
+                                 "y":697.333333333333
+                                }, 
+                                {
+                                 "x":1105.33333333333,
+                                 "y":720
+                                }, 
+                                {
+                                 "x":1102.66666666667,
+                                 "y":761.333333333333
+                                }, 
+                                {
+                                 "x":-54.6666666666667,
+                                 "y":761.333333333333
+                                }, 
+                                {
+                                 "x":-54.6666666666667,
+                                 "y":-8
+                                }],
+                         "rotation":0,
+                         "type":"",
+                         "visible":true,
+                         "width":0,
+                         "x":54.6666666666667,
+                         "y":38.6666666666667
+                        }, 
+                        {
+                         "height":0,
+                         "id":4,
+                         "name":"",
+                         "polygon":[
+                                {
+                                 "x":0,
+                                 "y":0
+                                }, 
+                                {
+                                 "x":-70.6666666666666,
+                                 "y":138.666666666667
+                                }, 
+                                {
+                                 "x":-117.333333333333,
+                                 "y":146.666666666667
+                                }, 
+                                {
+                                 "x":-145.333333333333,
+                                 "y":177.333333333333
+                                }, 
+                                {
+                                 "x":-145.333333333333,
+                                 "y":209.333333333333
+                                }, 
+                                {
+                                 "x":-56,
+                                 "y":218.666666666667
+                                }, 
+                                {
+                                 "x":-34.6666666666666,
+                                 "y":309.333333333333
+                                }, 
+                                {
+                                 "x":-38.6666666666666,
+                                 "y":362.666666666667
+                                }, 
+                                {
+                                 "x":-14.6666666666666,
+                                 "y":388
+                                }, 
+                                {
+                                 "x":17.3333333333334,
+                                 "y":380
+                                }, 
+                                {
+                                 "x":29.3333333333334,
+                                 "y":350.666666666667
+                                }, 
+                                {
+                                 "x":13.3333333333334,
+                                 "y":298.666666666667
+                                }, 
+                                {
+                                 "x":14.6666666666666,
+                                 "y":216
+                                }, 
+                                {
+                                 "x":6.66666666666663,
+                                 "y":168
+                                }, 
+                                {
+                                 "x":57.3333333333334,
+                                 "y":52
+                                }, 
+                                {
+                                 "x":46.6666666666666,
+                                 "y":9.33333333333334
+                                }],
+                         "properties":
+                            {
+                             "solid":true
+                            },
+                         "propertytypes":
+                            {
+                             "solid":"bool"
+                            },
+                         "rotation":0,
+                         "type":"",
+                         "visible":true,
+                         "width":0,
+                         "x":954.666666666667,
+                         "y":237.333333333333
+                        }],
+                 "opacity":1,
+                 "type":"objectgroup",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }],
+         "name":"terrain",
+         "opacity":1,
+         "properties":
+            {
+             "solid":true
+            },
+         "propertytypes":
+            {
+             "solid":"bool"
+            },
+         "type":"group",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "layers":[
+                {
+                 "image":"treasure.png",
+                 "name":"treasure",
+                 "offsetx":852,
+                 "offsety":349.333333333333,
+                 "opacity":1,
+                 "type":"imagelayer",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }, 
+                {
+                 "draworder":"topdown",
+                 "name":"treasure",
+                 "objects":[
+                        {
+                         "height":0,
+                         "id":6,
+                         "name":"",
+                         "polygon":[
+                                {
+                                 "x":0,
+                                 "y":0
+                                }, 
+                                {
+                                 "x":11.3333333333333,
+                                 "y":-6.66666666666663
+                                }, 
+                                {
+                                 "x":24,
+                                 "y":-2
+                                }, 
+                                {
+                                 "x":25.3333333333333,
+                                 "y":16.6666666666667
+                                }, 
+                                {
+                                 "x":4,
+                                 "y":20
+                                }],
+                         "rotation":0,
+                         "type":"",
+                         "visible":true,
+                         "width":0,
+                         "x":854,
+                         "y":356.666666666667
+                        }],
+                 "opacity":1,
+                 "type":"objectgroup",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }],
+         "name":"treasure",
+         "opacity":1,
+         "properties":
+            {
+             "carriable":true,
+             "collectible":true,
+             "drag multiplier y":1,
+             "rewards":"treasureRewards",
+             "solid collisions":true
+            },
+         "propertytypes":
+            {
+             "carriable":"bool",
+             "collectible":"bool",
+             "drag multiplier y":"float",
+             "rewards":"string",
+             "solid collisions":"bool"
+            },
+         "type":"group",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "layers":[
+                {
+                 "image":"trinket.png",
+                 "name":"trinket",
+                 "offsetx":732,
+                 "offsety":734.666666666667,
+                 "opacity":1,
+                 "type":"imagelayer",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }, 
+                {
+                 "draworder":"topdown",
+                 "name":"trinket",
+                 "objects":[
+                        {
+                         "height":0,
+                         "id":7,
+                         "name":"",
+                         "polygon":[
+                                {
+                                 "x":0,
+                                 "y":0
+                                }, 
+                                {
+                                 "x":11.6666666666666,
+                                 "y":-0.333333333333371
+                                }, 
+                                {
+                                 "x":10.3333333333333,
+                                 "y":-11.6666666666666
+                                }, 
+                                {
+                                 "x":-1,
+                                 "y":-12.3333333333334
+                                }],
+                         "rotation":0,
+                         "type":"",
+                         "visible":true,
+                         "width":0,
+                         "x":735,
+                         "y":748.666666666667
+                        }],
+                 "opacity":1,
+                 "type":"objectgroup",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }],
+         "name":"trinket",
+         "opacity":1,
+         "properties":
+            {
+             "collectible":true,
+             "rewards":"trinketRewards"
+            },
+         "propertytypes":
+            {
+             "collectible":"bool",
+             "rewards":"string"
+            },
+         "type":"group",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "layers":[
+                {
+                 "image":"alien.png",
+                 "name":"alien",
+                 "offsetx":972,
+                 "offsety":397.333333333333,
+                 "opacity":1,
+                 "type":"imagelayer",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }, 
+                {
+                 "draworder":"topdown",
+                 "name":"alien",
+                 "objects":[
+                        {
+                         "height":0,
+                         "id":10,
+                         "name":"",
+                         "polygon":[
+                                {
+                                 "x":0,
+                                 "y":0
+                                }, 
+                                {
+                                 "x":10,
+                                 "y":-32
+                                }, 
+                                {
+                                 "x":26.6666666666666,
+                                 "y":-32
+                                }, 
+                                {
+                                 "x":35.3333333333333,
+                                 "y":3.33333333333337
+                                }, 
+                                {
+                                 "x":19.3333333333333,
+                                 "y":-6.66666666666663
+                                }],
+                         "rotation":0,
+                         "type":"",
+                         "visible":true,
+                         "width":0,
+                         "x":986,
+                         "y":436.666666666667
+                        }],
+                 "opacity":1,
+                 "type":"objectgroup",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }],
+         "name":"alien",
+         "opacity":1,
+         "properties":
+            {
+             "on start":"alienLoop",
+             "solid":true
+            },
+         "propertytypes":
+            {
+             "on start":"string",
+             "solid":"bool"
+            },
+         "type":"group",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "layers":[
+                {
+                 "image":"bubble.png",
+                 "name":"bubble",
+                 "offsetx":201.333333333333,
+                 "offsety":541.333333333333,
+                 "opacity":1,
+                 "type":"imagelayer",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }, 
+                {
+                 "draworder":"topdown",
+                 "name":"bubble",
+                 "objects":[
+                        {
+                         "height":0,
+                         "id":8,
+                         "name":"",
+                         "polygon":[
+                                {
+                                 "x":0,
+                                 "y":0
+                                }, 
+                                {
+                                 "x":17.3333333333333,
+                                 "y":29.3333333333334
+                                }, 
+                                {
+                                 "x":-4,
+                                 "y":52
+                                }, 
+                                {
+                                 "x":-22.6666666666667,
+                                 "y":49.3333333333334
+                                }, 
+                                {
+                                 "x":-36,
+                                 "y":12
+                                }],
+                         "rotation":0,
+                         "type":"",
+                         "visible":true,
+                         "width":0,
+                         "x":238.666666666667,
+                         "y":545.333333333333
+                        }],
+                 "opacity":1,
+                 "type":"objectgroup",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }],
+         "name":"bubble",
+         "opacity":1,
+         "properties":
+            {
+             "bounce multiplier":1,
+             "drag multiplier y":-1,
+             "reserved":true,
+             "solid collisions":true
+            },
+         "propertytypes":
+            {
+             "bounce multiplier":"int",
+             "drag multiplier y":"float",
+             "reserved":"bool",
+             "solid collisions":"bool"
+            },
+         "type":"group",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "layers":[
+                {
+                 "image":"vent.png",
+                 "name":"vent",
+                 "offsetx":144,
+                 "offsety":656,
+                 "opacity":1,
+                 "type":"imagelayer",
+                 "visible":true,
+                 "x":0,
+                 "y":0
+                }],
+         "name":"vent",
+         "opacity":1,
+         "properties":
+            {
+             "on start":"ventLoop"
+            },
+         "propertytypes":
+            {
+             "on start":"string"
+            },
+         "type":"group",
+         "visible":true,
+         "x":0,
+         "y":0
+        }],
+ "nextobjectid":12,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tileheight":800,
+ "tilesets":[],
+ "tilewidth":1200,
+ "type":"map",
+ "version":"2017.05.16",
+ "width":1
 }

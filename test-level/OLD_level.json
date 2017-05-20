@@ -1,0 +1,328 @@
+{
+	"width": 1200,
+	"height": 800,
+	"originX": 400,
+	"background": "background",
+	"foreground": "foreground",
+	"startX": 100,
+	"startY": 100,
+	"images": [
+		{"name": "background", "src": "background.png"},
+		{"name": "foreground", "src": "foreground.png"},
+		{"name": "treasure", "src": "treasure.png"},
+		{"name": "trinket", "src": "trinket.png"},
+		{"name": "net", "src": "net.png"},
+		{"name": "alien", "src": "alien.png"},
+		{"name": "energy", "src": "energy.png"},
+		{"name": "vent", "src": "vent.png"},
+		{"name": "bubble", "src": "bubble.png"}
+	],
+	"reservedObjects": [
+		{
+			"name": "bubble",
+			"object": {
+				"bubble": true,
+				"dragMultiplierY": -1,
+				"solidCollisions": true,
+				"bounceMultiplier": 1,
+				"sprites": {
+					"main": {
+						"image": "bubble",
+						"x": -4,
+						"y": -4
+					}
+				},
+				"vertices": [
+					[0, 0],
+					[50, 0],
+					[50, 50],
+					[0, 50]
+				]
+			}
+		}
+	],
+	"initObjects": [
+		{
+			"object": {
+				"net": true,
+				"x": 80,
+				"y": 294,
+				"sprites": {
+					"main": {
+						"image": "net",
+						"x": -52,
+						"y": -74
+					}
+				},
+				"vertices": [
+					[0, 0],
+					[165, 0],
+					[165, 40],
+					[0, 40]
+				]
+			}
+		},
+			
+		{
+			"object": {
+				"x": -254,
+				"y": 663,
+				"onStart": [
+					["gameLoop",
+						["wait", 12500],
+						["insert", ["copy", "bubble"], ["relativeX", 60], ["relativeY", -20]]]
+				],
+				"sprites": {
+					"main": {
+						"image": "vent",
+						"x": 0,
+						"y": 0
+					}
+				},
+				"vertices": []
+			}
+		},
+			
+		{
+			"object": {
+				"solid": true,
+				"x": 680,
+				"y": 250,
+				"onStart": [
+					["gameLoop", 
+						["slideTo", 590, 400, 2000],
+						["slideTo", 680, 250, 2000]]
+				],
+				"sprites": {
+					"main": {
+						"image": "alien",
+						"x": -17,
+						"y": -7
+					}
+				},
+				"vertices": [
+					[0, 0],
+					[30, 0],
+					[30, 30],
+					[0, 30]
+				]
+			}
+		},
+			
+		{
+			"object": {
+				"collectible": true,
+				"rewards": [["addScore", 25]],
+				"x": 300,
+				"y": 735,
+				"sprites": {
+					"main": {
+						"image": "trinket",
+						"x": -3,
+						"y": -3
+					}
+				},
+				"vertices": [
+					[0, 0],
+					[10, 0],
+					[10, 10],
+					[0, 10]
+				]
+			}
+		},
+		{
+			"object": {
+				"collectible": true,
+				"carriable": true,
+				"dragMultiplierY": 1,
+				"solidCollisions": true,
+				"rewards": [
+					["addScore", 300],
+					["winLevel"]
+				],
+				"x": 465,
+				"y": 355,
+				"sprites": {
+					"main": {
+						"image": "treasure",
+						"x": -5,
+						"y": -5
+					}
+				},
+				"vertices": [
+					[0, 0],
+					[20, 0],
+					[20, 20],
+					[0, 20]
+				]
+			}
+		},
+			
+		{
+			"object": {
+				"x": -350,
+				"y": 50,
+				"energy": true,
+				"sprites": {
+					"main": {
+						"image": "energy",
+						"x": -9,
+						"y": -1
+					}
+				},
+				"vertices": [
+					[0, 0],
+					[350, 0],
+					[350, 200],
+					[0, 200]
+				]
+			}
+		},
+			
+		{
+			"object": {
+				"solid": true,
+				"x": -400,
+				"y": 0,
+				"vertices": [
+					[0, 0],
+					[1200, 0],
+					[1200, 50],
+					[0, 50]
+				]
+			}
+		},
+		{
+			"object": {
+				"solid": true,
+				"x": -400,
+				"y": 750,
+				"vertices": [
+					[0, 0],
+					[1200, 0],
+					[1200, 50],
+					[0, 50]
+				]
+			}
+		},
+		{
+			"object": {
+				"solid": true,
+				"x": 0,
+				"y": 50,
+				"vertices": [
+					[0, 0],
+					[50, 0],
+					[50, 270],
+					[0, 270]
+				]
+			}
+		},
+		{
+			"object": {
+				"solid": true,
+				"x": 0,
+				"y": 570,
+				"vertices": [
+					[0, 0],
+					[50, 0],
+					[50, 180],
+					[0, 180]
+				]
+			}
+		},
+		{
+			"object": {
+				"solid": true,
+				"x": -400,
+				"y": 50,
+				"vertices": [
+					[0, 0],
+					[50, 0],
+					[50, 700],
+					[0, 700]
+				]
+			}
+		},
+		{
+			"object": {
+				"solid": true,
+				"x": 750,
+				"y": 50,
+				"vertices": [
+					[0, 0],
+					[50, 0],
+					[50, 700],
+					[0, 700]
+				]
+			}
+		},
+			
+		{
+			"object": {
+				"solid": true,
+				"x": 265,
+				"y": 50,
+				"vertices": [
+					[0, 0],
+					[95, 0],
+					[10, 240]
+				]
+			}
+		},
+		{
+			"object": {
+				"solid": true,
+				"x": 250,
+				"y": 50,
+				"vertices": [
+					[110, 0],
+					[15, 475],
+					[0, 370],
+					[25, 240]
+				]
+			}
+		},
+			
+		{
+			"object": {
+				"solid": true,
+				"x": 490,
+				"y": 240,
+				"vertices": [
+					[70, 0],
+					[125, 40],
+					[65, 175],
+					[20, 210],
+					[0, 135]
+				]
+			}
+		},
+		{
+			"object": {
+				"solid": true,
+				"x": 415,
+				"y": 375,
+				"vertices": [
+					[95, 75],
+					[5, 80],
+					[0, 25],
+					[75, 0]
+				]
+			}
+		},
+		{
+			"object": {
+				"solid": true,
+				"x": 510,
+				"y": 415,
+				"vertices": [
+					[45, 0],
+					[70, 190],
+					[20, 205],
+					[0, 35]
+				]
+			}
+		}
+	]
+}

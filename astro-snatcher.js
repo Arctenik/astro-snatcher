@@ -128,10 +128,13 @@ function getLevel() {
 		r.open("get", levelPath + "/level.json");
 		r.responseType = "json";
 		r.onload = () => {
+			readLevel(r.response);
+			/*
 			level = fillLevelProperties(r.response);
 			if (level.startX !== undefined) ship.x = level.startX;
 			if (level.startY !== undefined) ship.y = level.startY;
 			getLevelImages().then(resolve);
+			*/
 		}
 		r.send();
 	});
