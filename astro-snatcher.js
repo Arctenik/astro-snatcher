@@ -61,7 +61,7 @@ var score = 0,
 		width: canvas.width,
 		height: canvas.height
 	},
-	ship = addObjectBox({
+	ship = {
 		x: 100,
 		y: 100,
 		energyLevel: 100,
@@ -76,19 +76,24 @@ var score = 0,
 		sprite: "ship.png",
 		spriteX: -10,
 		spriteY: -12,
-		vertices: [
-			[20, 0],
-			[80, 0],
-			[100, 70],
-			[0, 70]
-		],
+		hitboxes: [addObjectBox({
+			active: true,
+			x: 0,
+			y: 0,
+			polygons: [[
+				[20, 0],
+				[80, 0],
+				[100, 70],
+				[0, 70]
+			]]
+		})],
 		velX: 0,
 		velY: 0
-	}),
-	claw = addObjectBox({
+	},
+	claw = {
 		updateCoords() {
-			this.x = ship.x + (ship.width/2) - (this.width/2);
-			this.y = ship.y + ship.height - this.height + this.extended;
+			this.x = ship.x + (ship.hitboxes[0].width/2) - (this.hitboxes[0].width/2);
+			this.y = ship.y + ship.hitboxes[0].height - this.hitboxes[0].height + this.extended;
 			if (this.holding) {
 				this.holding.x = this.x + this.holdingX;
 				this.holding.y = this.y + this.holdingY;
@@ -100,15 +105,20 @@ var score = 0,
 		armSprite: "claw-arm.png",
 		armSpriteX: 3, // (relative to claw position)
 		armSpriteEnds: 5, // (amount that it continues beyond the "actual" arm on either end)
-		vertices: [
-			[0, 0],
-			[16, 0],
-			[16, 16],
-			[0, 16]
-		],
+		hitboxes: [addObjectBox({
+			active: true,
+			x: 0,
+			y: 0,
+			polygons: [[
+				[0, 0],
+				[16, 0],
+				[16, 16],
+				[0, 16]
+			]]
+		})],
 		extended: 0,
 		holding: false
-	});
+	};
 
 
 
@@ -197,12 +207,12 @@ function fillObjectProperties(obj) {
 
 function addObjectBox(obj) {
 	var minX, maxX, minY, maxY;
-	obj.vertices.forEach(([x, y]) => {
+	obj.polygons.forEach(p => p.forEach(([x, y]) => {
 		minX = minX === undefined ? x : Math.min(minX, x);
 		maxX = maxX === undefined ? x : Math.max(maxX, x);
 		minY = minY === undefined ? y : Math.min(minY, y);
 		maxY = maxY === undefined ? y : Math.max(maxY, y);
-	});
+	}));
 	obj.width = maxX - minX;
 	obj.height = maxY - minY;
 	return obj;
@@ -261,6 +271,7 @@ function getLevelScripts() {
 
 
 
+/*
 function getObjectCollisions(obj) {
 	var collisions = [],
 		net, energy;
@@ -326,14 +337,102 @@ function getClawCollisions() {
 	
 	return [collisions, collectible];
 }
+*/
 
-function getSpecificCollision(a, b) { // 'a' should be the "main" object i guess??
-	var result = getRectCollision(a, b) && getSatCollision(a, b);
-	if (result) {
-		if (b.transferVelX) result.transferVelX = b.transferVelX;
-		if (b.transferVelY) result.transferVelY = b.transferVelY;
+function getObjectCollisions(obj) {
+	return getCollisions(obj, [
+		["solid", true, o => o.solid],
+		["net", false, o => o.net],
+		["energy", false, o => o.energy]
+	]);
+}
+
+function getShipCollisions() {
+	return getCollisions(ship, [
+		["solid", true, o => o.solid],
+		["energy", false, o => o.energy]
+	]);
+}
+
+function getClawCollisions() {
+	return getCollisions(claw, [
+		["solid", true, o => o.solid],
+		["collectible", false, o => o.collectible]
+	]);
+}
+
+function getCollisions(obj, types, singleResult) {
+	var result = {};
+	types.forEach(([type, multi]) => {
+		if (multi) result[type] = [];
+	});
+	for (let i = 0; i < level.objects.length; i++) {
+		let levelObj = level.objects[i];
+		if (obj !== levelObj) {
+			let objTypes = [];
+			
+			types.forEach(([type, multi, test]) => {
+				if ((multi || !result[type]) && test(levelObj))
+					objTypes.push(type);
+			});
+			
+			if (objTypes.length) {
+				let collisions = getSpecificObjCollisions(obj, levelObj);
+				if (collisions) {
+					types.forEach(([type, multi]) => {
+						if (objTypes.includes(type)) {
+							if (multi) result[type].push(collisions);
+							else result[type] = collisions;
+						}
+					});
+					if (singleResult) return result;
+				}
+			}
+		}
 	}
 	return result;
+}
+
+function getSpecificObjCollisions(a, b) { // 'a' should be the "main" object i guess??
+	var collisions = [];
+	a.hitboxes.forEach(ahb => {
+		if (ahb.active) {
+			ahb.polygons.forEach(ap => {
+				let apObj = {
+					x: a.x + ahb.x,
+					y: a.y + ahb.y,
+					width: ahb.width,
+					height: ahb.height,
+					vertices: ap
+				};
+				b.hitboxes.forEach(bhb => {
+					if (bhb.active) {
+						bhb.polygons.forEach(bp => {
+							let bpObj = {
+								x: b.x + bhb.x,
+								y: b.y + bhb.y,
+								width: bhb.width,
+								height: bhb.height,
+								vertices: bp
+							};
+							let collision = getSpecificCollision(apObj, bpObj);
+							if (collision) collisions.push(collision);
+						});
+					}
+				});
+			});
+		}
+	});
+	if (collisions.length) {
+		let result = {collisions};
+		if (b.transferVelX) result.transferVelX = b.transferVelX;
+		if (b.transferVelY) result.transferVelY = b.transferVelY;
+		return result;
+	}
+}
+
+function getSpecificCollision(a, b) {
+	return getRectCollision(a, b) && getSatCollision(a, b);
 }
 
 function getSpecificInside(a, b) { // determines whether 'a' is inside 'b'
@@ -468,9 +567,9 @@ function overlapDir(a, b) {
 
 function getDisplacementVector(collisions) {
 	var modVector = [0, 0];
-	collisions.forEach(collision => {
+	collisions.forEach(({collisions: objCollisions}) => objCollisions.forEach(collision => {
 		modVector = addVectors(modVector, scaleVector(collision.axis, collision.dir * collision.amount));
-	});
+	}));
 	return modVector;
 }
 
@@ -507,45 +606,73 @@ function normalizeVector(vec) {
 
 
 function drawLevel() {
-	level.objects.forEach(obj => drawLevelObject(obj));
+	var sprites = [];
+	level.objects.forEach(obj => {
+		obj.sprites.forEach(sprite => {
+			if (sprite.active) sprites.push([sprite, obj.x, obj.y]);
+		});
+	});
+	level.sprites.forEach(sprite => {
+		if (sprite.active) sprites.push([sprite, 0, 0]);
+	});
+	sprites.sort((a, b) => a[0].z - b[0].z);
+	sprites.forEach(([sprite, x, y]) => drawLevelSprite(sprite, x, y));
 }
 
+function drawLevelSprite(sprite, x, y) {
+	drawLevelImage(images[sprite.image.src], x + sprite.x, y + sprite.y, sprite.parallax);
+}
+
+/*
 function drawLevelObject(obj) {
 	obj.sprites.forEach(sprite => {
 		if (sprite.active) {
 			drawLevelImage(images[sprite.image.src], obj.x + sprite.x, obj.y + sprite.y);
 		}
 	});
-	/*
+	*//*
 	if (obj.sprite !== undefined) {
 		let sprite = obj.sprites[obj.sprite];
 		drawLevelImage(images[sprite.image], obj.x + sprite.x, obj.y + sprite.y);
 	}
-	*/
+	*//*
 }
+*/
 
 function drawLevelImage(...args) {
+	var parallax;
+	if (args.length%2 === 0) parallax = args.pop();
+	if (parallax === undefined) parallax = 1;
 	if (args[5] !== undefined) {
-		args[5] -= camera.x;
-		args[6] -= camera.y;
+		args[5] -= camera.x * parallax;
+		args[6] -= camera.y * parallax;
 	} else {
-		args[1] -= camera.x;
-		args[2] -= camera.y;
+		args[1] -= camera.x * parallax;
+		args[2] -= camera.y * parallax;
 	}
 	ctx.drawImage(...args);
 }
 
 
 function drawHitboxes() {
-	drawHitbox(ship);
-	drawHitbox(claw);
-	level.objects.forEach(obj => drawHitbox(obj));
+	drawObjectHitboxes(ship);
+	drawObjectHitboxes(claw);
+	level.objects.forEach(obj => drawObjectHitboxes(obj));
 }
 
-function drawHitbox(obj) {
+function drawObjectHitboxes(obj) {
+	obj.hitboxes.forEach(hb => {
+		if (hb.active) hb.polygons.forEach(p => {
+			drawHitboxPolygon(p, obj.x + hb.x, obj.y + hb.y);
+		});
+	});
+}
+
+function drawHitboxPolygon(vertices, px, py) {
 	ctx.beginPath();
-	obj.vertices.forEach(([x, y], i) =>
-		ctx[i ? "lineTo" : "moveTo"](x + obj.x - camera.x, y + obj.y - camera.y));
+	vertices.forEach(([x, y], i) => {
+		ctx[i ? "lineTo" : "moveTo"](px + x - camera.x, py + y - camera.y);
+	});
 	ctx.closePath();
 	ctx.setLineDash([5, 5]);
 	ctx.lineDashOffset = 0;
@@ -805,7 +932,7 @@ function run(time) {
 		}
 		
 		if (obj.solidCollisions) { // the net + bubble stuff needs to be moved to a separate thing....
-			var [objCollisions, net, energy] = getObjectCollisions(obj);
+			var {solid: objCollisions, net, energy} = getObjectCollisions(obj);
 			if (net && obj.carriable) {
 				deleteObjects.push(obj);
 				evalEffects({
@@ -835,7 +962,7 @@ function run(time) {
 	
 	
 	
-	var inEnergy = getShipInEnergy(),
+	var inEnergy = false, //getShipInEnergy(),
 		currentDragX = inEnergy ? energyDragX : drag,
 		currentDragY = inEnergy ? energyDragY : drag;
 	
@@ -911,12 +1038,16 @@ function run(time) {
 	claw.updateCoords();
 	
 	
-	var [shipCollisions, touchingEnergy] = getShipCollisions(),
+	var {solid: shipCollisions, energy: touchingEnergy} = getShipCollisions(),
 		clawCollisions, clawCollectible;
 	
 	if (touchingEnergy) ship.energyLevel = ship.maxEnergy;
 	
-	if (claw.extended) [clawCollisions, clawCollectible] = getClawCollisions();
+	if (claw.extended) {
+		let cc = getClawCollisions();
+		clawCollisions = cc.solid;
+		clawCollectible = cc.collectible;
+	}
 	
 	if (clawCollectible && !claw.holding && !droppedHeldItem && prevControls.claw && !controls.claw) {
 		claw.holding = clawCollectible;
@@ -991,8 +1122,8 @@ function run(time) {
 	}
 	
 	
-	camera.x = Math.round(ship.x - (camera.width/2) + (ship.width/2));
-	camera.y = Math.round(ship.y - (camera.height/2) + (ship.height/2));
+	camera.x = Math.round(ship.x - (camera.width/2) + (ship.hitboxes[0].width/2));
+	camera.y = Math.round(ship.y - (camera.height/2) + (ship.hitboxes[0].height/2));
 	
 	if (camera.x < level.minX) camera.x = level.minX;
 	else if (camera.x > level.maxX - camera.width) camera.x = level.maxX - camera.width;
@@ -1002,8 +1133,12 @@ function run(time) {
 	
 	ctx.clearRect(0, 0, camera.width, camera.height);
 	
+	/*
 	if (level.background)
 		ctx.drawImage(images[level.background], 0, 0);
+	*/
+	
+	drawLevel();
 	
 	var armImage = images[claw.armSprite],
 		armDimensions = [armImage.width, (claw.armSpriteEnds * 2) + claw.extended];
@@ -1012,7 +1147,7 @@ function run(time) {
 		armImage,
 		0, armImage.height - (claw.armSpriteEnds * 2) - claw.extended,
 		...armDimensions,
-		claw.x + claw.armSpriteX, ship.y + ship.height - claw.height - claw.armSpriteEnds,
+		claw.x + claw.armSpriteX, ship.y + ship.hitboxes[0].height - claw.hitboxes[0].height - claw.armSpriteEnds,
 		...armDimensions
 	);
 	
@@ -1027,10 +1162,10 @@ function run(time) {
 	
 	if (claw.holding) drawLevelObject(claw.holding);
 	
-	drawLevel();
-	
+	/*
 	if (level.foreground)
 		ctx.drawImage(images[level.foreground], level.minX-camera.x, level.minY-camera.y);
+	*/
 	
 	
 	if (hitboxInp.checked) drawHitboxes();

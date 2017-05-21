@@ -733,6 +733,8 @@
                  "y":0
                 }],
          "name":"vent",
+         "offsetx":0,
+         "offsety":6.66666666666674,
          "opacity":1,
          "properties":
             {

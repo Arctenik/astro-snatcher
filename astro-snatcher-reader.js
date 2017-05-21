@@ -32,6 +32,8 @@ function readLevel(level) {
 		initObjects = [],
 		reservedObjects = [];
 	
+	let nextZ = 0;
+	
 	level.layers.forEach(layer => {
 		let layerX = layer.x + (layer.offsetx || 0),
 			layerY = layer.y + (layer.offsety || 0);
@@ -49,6 +51,8 @@ function readLevel(level) {
 			} else {
 				let hitboxes = [],
 					sprites = [];
+				
+				let layerZ = nextZ++;
 				
 				layer.layers.forEach(sublayer => {
 					let sublayerX = layerX + sublayer.x + (sublayer.offsetx || 0),
@@ -104,6 +108,7 @@ function readLevel(level) {
 							name: sublayer.name,
 							x: sublayerX,
 							y: sublayerY,
+							z: layerZ,
 							image,
 							active: sublayer.visible
 						});
@@ -149,6 +154,7 @@ function readLevel(level) {
 				name: layer.name,
 				x: layerX,
 				y: layerY,
+				z: nextZ++,
 				image,
 				active: layer.visible,
 				parallax: layer.properties && layer.properties.parallax
